@@ -8,13 +8,13 @@ import random
 import re
 import time
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable
 
 import feedparser
 import requests
-from atproto import Client, models
+from atproto import Client, client_utils, models
 from sentence_transformers import SentenceTransformer, util
 
 ROOT = Path(__file__).parent
@@ -72,17 +72,24 @@ def arxiv(query: str, limit: int = 35) -> list[Paper]:
 def openalex(query: str, limit: int = 35) -> list[Paper]:
     response = requests.get("https://api.openalex.org/works", params={
         "search": query, "per-page": limit, "sort": "publication_date:desc",
-        "filter": f"from_publication_date:{(datetime.now(timezone.utc)-timedelta(days=365)).date()}",
+        "filter": f"from_publication_date:{(datetime.now(timezone.utc)-timedelta(days=365)).date()},to_publication_date:{datetime.now(timezone.utc).date()}",
     }, headers=HEADERS, timeout=30)
     response.raise_for_status()
     papers = []
     for work in response.json().get("results", []):
+        if work.get("type") not in {"article", "preprint"}:
+            continue
+        published = work.get("publication_date", "")
+        if published and published > str(date.today()):
+            continue
         inverted = work.get("abstract_inverted_index") or {}
         words = sorted(((pos, word) for word, positions in inverted.items() for pos in positions))
         abstract = " ".join(word for _, word in words)
         concepts = [c["display_name"] for c in work.get("concepts", [])[:4]]
+        location = work.get("best_oa_location") or {}
+        url = location.get("pdf_url") or location.get("landing_page_url") or work.get("doi") or work.get("id")
         papers.append(Paper(f"openalex:{work['id'].rsplit('/', 1)[-1]}", clean(work.get("title", "")), clean(abstract),
-                            work.get("doi") or work.get("id"), concepts, "OpenAlex", work.get("publication_date", "")))
+                            url, concepts, "OpenAlex", published))
     return papers
 
 
@@ -114,7 +121,8 @@ def unique(papers: Iterable[Paper], posted: set[str]) -> list[Paper]:
     seen, kept = set(), []
     for p in papers:
         key = re.sub(r"[^a-z0-9]", "", p.title.lower())[:100]
-        if p.uid not in posted and key and key not in seen and len(p.abstract) > 30:
+        future_dated = bool(p.published and p.published[:10] > str(date.today()))
+        if p.uid not in posted and key and key not in seen and len(p.abstract) > 30 and not future_dated:
             seen.add(key); kept.append(p)
     return kept
 
@@ -151,17 +159,41 @@ def one_sentence(abstract: str) -> str:
     return sentence[:180].rstrip(" ,;:") + ("…" if len(sentence) > 180 else "")
 
 
-def post_text(paper: Paper, category: str, number: int) -> str:
-    fields = (", ".join(paper.fields[:3]) or "研究論文")[:55]
-    reason = {"専門": "研究テーマとの類似度が高い", "関連": "周辺領域との接点がある", "異分野": "視点を広げる異分野の一冊"}[category]
-    # Keep the URL intact: cutting a 300-character post from the end can make
-    # the most important part (the paper link) unusable.
-    fixed = f"🎲 Paper Gacha {number}/10｜{category}\n理由: {reason}\n分野: {fields}\n{paper.url}"
-    budget = max(40, 300 - len(fixed) - len("\n要約: \n"))
-    title = paper.title[: min(110, budget // 2)].rstrip() + ("…" if len(paper.title) > min(110, budget // 2) else "")
-    summary_budget = max(25, budget - len(title) - 1)
-    summary = one_sentence(paper.abstract)[:summary_budget].rstrip() + ("…" if len(one_sentence(paper.abstract)) > summary_budget else "")
-    return f"🎲 Paper Gacha {number}/10｜{category}\n{title}\n要約: {summary}\n理由: {reason}\n分野: {fields}\n{paper.url}"
+def paper_line(paper: Paper) -> str:
+    year = paper.published[:4] if re.fullmatch(r"\d{4}", paper.published[:4]) else "n.d."
+    fields = ", ".join(paper.fields) or "Unclassified"
+    return f"• {paper.title} ({year})\n  • {fields}"
+
+
+def category_pages(category: str, papers: list[Paper], limit: int = 280) -> list[list[Paper]]:
+    """Split only between papers; never shorten a title, year, or keyword."""
+    pages, current = [], []
+    heading = f"Paper Gacha ~{category}~"
+    for paper in papers:
+        candidate = "\n".join([heading] + [paper_line(x) for x in current + [paper]])
+        if current and len(candidate) > limit:
+            pages.append(current)
+            current = [paper]
+        else:
+            current.append(paper)
+    if current:
+        pages.append(current)
+    return pages
+
+
+def category_text(category: str, papers: list[Paper], continuation: bool) -> str:
+    heading = f"Paper Gacha ~{category}~" + (" (cont.)" if continuation else "")
+    return "\n".join([heading] + [paper_line(paper) for paper in papers])
+
+
+def category_content(category: str, papers: list[Paper], continuation: bool) -> client_utils.TextBuilder:
+    heading = f"Paper Gacha ~{category}~" + (" (cont.)" if continuation else "")
+    content = client_utils.TextBuilder().text(heading)
+    for paper in papers:
+        year = paper.published[:4] if re.fullmatch(r"\d{4}", paper.published[:4]) else "n.d."
+        fields = ", ".join(paper.fields) or "Unclassified"
+        content.text("\n• ").link(paper.title, paper.url).text(f" ({year})\n  • {fields}")
+    return content
 
 
 def load_history() -> set[str]:
@@ -196,31 +228,35 @@ def main() -> None:
     related = unique(fetch(" ".join(RELATED)), posted)
     diverse = {field: unique(fetch(query, 15), posted) for field, query in DIVERSE.items()}
     model = SentenceTransformer(MODEL_NAME)
-    selections = [("専門", p) for p in ranked(expert, EXPERTISE, 4, model)]
-    selections += [("関連", p) for p in ranked(related, RELATED, 3, model)]
-    selections += [("異分野", p) for p in diverse_pick(diverse, 3)]
-    if len(selections) != 10:
-        raise RuntimeError(f"Only selected {len(selections)} papers; retry later or broaden your query settings.")
+    selections = {
+        "Core": ranked(expert, EXPERTISE, 4, model),
+        "Related": ranked(related, RELATED, 3, model),
+        "Serendipity": diverse_pick(diverse, 3),
+    }
+    if sum(len(papers) for papers in selections.values()) != 10:
+        raise RuntimeError("Only selected fewer than 10 papers; retry later or broaden your query settings.")
     dry_run = os.getenv("PAPER_GACHA_DRY_RUN", "false").lower() == "true"
     if dry_run:
-        for i, (category, paper) in enumerate(selections, 1): print("\n" + post_text(paper, category, i))
+        for category, papers in selections.items():
+            for i, page in enumerate(category_pages(category, papers)):
+                print("\n" + category_text(category, page, continuation=i > 0))
         return
     handle, password = os.getenv("BLUESKY_HANDLE"), os.getenv("BLUESKY_APP_PASSWORD")
     if not handle or not password: raise RuntimeError("Set BLUESKY_HANDLE and BLUESKY_APP_PASSWORD (or use PAPER_GACHA_DRY_RUN=true).")
     client = Client(); login_with_retry(client, handle, password)
-    root_ref = None
-    parent_ref = None
     posted_this_run: set[str] = set()
-    for i, (category, paper) in enumerate(selections, 1):
-        kwargs = {"text": post_text(paper, category, i)}
-        if parent_ref:
-            kwargs["reply_to"] = models.AppBskyFeedPost.ReplyRef(root=root_ref, parent=parent_ref)
-        response = client.send_post(**kwargs)
-        parent_ref = models.ComAtprotoRepoStrongRef.Main(uri=response.uri, cid=response.cid)
-        root_ref = root_ref or parent_ref
-        posted_this_run.add(paper.uid)
-        save_history(posted | posted_this_run)
-        print(f"Posted {i}/10: {paper.title}")
+    for category, papers in selections.items():
+        root_ref = parent_ref = None
+        for i, page in enumerate(category_pages(category, papers)):
+            response = client.send_post(
+                text=category_content(category, page, continuation=i > 0),
+                **({"reply_to": models.AppBskyFeedPost.ReplyRef(root=root_ref, parent=parent_ref)} if parent_ref else {}),
+            )
+            parent_ref = models.ComAtprotoRepoStrongRef.Main(uri=response.uri, cid=response.cid)
+            root_ref = root_ref or parent_ref
+            posted_this_run.update(paper.uid for paper in page)
+            save_history(posted | posted_this_run)
+            print(f"Posted {category} page {i + 1}")
 
 
 if __name__ == "__main__":

@@ -44,7 +44,9 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python paper_gacha.py
       - name: Save posted-paper history
-        if: ${{ github.event_name != 'pull_request' && inputs.dry_run != true }}
+        # Manual runs are previews or experiments. Only the daily schedule
+        # establishes the durable deduplication history.
+        if: ${{ github.event_name == 'schedule' }}
         run: |
           git config user.name "paper-gacha[bot]"
           git config user.email "paper-gacha[bot]@users.noreply.github.com"
