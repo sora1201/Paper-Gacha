@@ -159,52 +159,41 @@ def one_sentence(abstract: str) -> str:
     return sentence[:180].rstrip(" ,;:") + ("…" if len(sentence) > 180 else "")
 
 
-def title_list_text(category: str, papers: list[Paper]) -> str:
-    """Build a compact category index that stays within Bluesky's post limit."""
-    lines = [f"🎲 Paper Gacha — {category} ({len(papers)})"]
-    for number, paper in enumerate(papers, 1):
-        # Four 42-character titles plus the heading remain well under the
-        # 300-grapheme Bluesky limit, including emoji and line breaks.
-        title = paper.title[:42].rstrip()
-        year = paper.published[:4] if re.fullmatch(r"\d{4}", paper.published[:4]) else "n.d."
-        lines.append(f"• {title}{'…' if len(title) < len(paper.title) else ''} ({year})")
-    return "\n".join(lines)
-
-
-def title_list_content(category: str, papers: list[Paper]) -> client_utils.TextBuilder:
-    """Create a category index with every title linked to its paper."""
-    content = client_utils.TextBuilder().text(f"🎲 Paper Gacha — {category} ({len(papers)})")
-    for paper in papers:
-        title = paper.title[:42].rstrip()
-        year = paper.published[:4] if re.fullmatch(r"\d{4}", paper.published[:4]) else "n.d."
-        content.text("\n• ").link(title + ("…" if len(title) < len(paper.title) else ""), paper.url).text(f" ({year})")
-    return content
-
-
-def post_parts(paper: Paper, number: int) -> tuple[str, str, str, str]:
-    fields = (", ".join(paper.fields[:3]) or "研究論文")[:55]
+def paper_line(paper: Paper) -> str:
     year = paper.published[:4] if re.fullmatch(r"\d{4}", paper.published[:4]) else "n.d."
-    fixed = f"{number}  ({year})\n\nAbst: \n\nFields: {fields}"
-    budget = max(40, 300 - len(fixed) - len("\n\n"))
-    title = paper.title[: min(110, budget // 2)].rstrip() + ("…" if len(paper.title) > min(110, budget // 2) else "")
-    summary_budget = max(25, budget - len(title) - 1)
-    summary = one_sentence(paper.abstract)[:summary_budget].rstrip() + ("…" if len(one_sentence(paper.abstract)) > summary_budget else "")
-    return title, year, summary, fields
+    fields = ", ".join(paper.fields) or "Unclassified"
+    return f"• {paper.title} ({year})\n  • {fields}"
 
 
-def post_text(paper: Paper, number: int) -> str:
-    """Plain-text preview used for dry runs."""
-    title, year, summary, fields = post_parts(paper, number)
-    return f"{number} {title} ({year})\n\nAbst: {summary}\n\nFields: {fields}"
+def category_pages(category: str, papers: list[Paper], limit: int = 280) -> list[list[Paper]]:
+    """Split only between papers; never shorten a title, year, or keyword."""
+    pages, current = [], []
+    heading = f"Paper Gacha ~{category}~"
+    for paper in papers:
+        candidate = "\n".join([heading] + [paper_line(x) for x in current + [paper]])
+        if current and len(candidate) > limit:
+            pages.append(current)
+            current = [paper]
+        else:
+            current.append(paper)
+    if current:
+        pages.append(current)
+    return pages
 
 
-def post_content(paper: Paper, number: int) -> client_utils.TextBuilder:
-    """Make the title, rather than a raw URL, the clickable paper link."""
-    title, year, summary, fields = post_parts(paper, number)
-    return (client_utils.TextBuilder()
-            .text(f"{number} ")
-            .link(title, paper.url)
-            .text(f" ({year})\n\nAbst: {summary}\n\nFields: {fields}"))
+def category_text(category: str, papers: list[Paper], continuation: bool) -> str:
+    heading = f"Paper Gacha ~{category}~" + (" (cont.)" if continuation else "")
+    return "\n".join([heading] + [paper_line(paper) for paper in papers])
+
+
+def category_content(category: str, papers: list[Paper], continuation: bool) -> client_utils.TextBuilder:
+    heading = f"Paper Gacha ~{category}~" + (" (cont.)" if continuation else "")
+    content = client_utils.TextBuilder().text(heading)
+    for paper in papers:
+        year = paper.published[:4] if re.fullmatch(r"\d{4}", paper.published[:4]) else "n.d."
+        fields = ", ".join(paper.fields) or "Unclassified"
+        content.text("\n• ").link(paper.title, paper.url).text(f" ({year})\n  • {fields}")
+    return content
 
 
 def load_history() -> set[str]:
@@ -249,27 +238,25 @@ def main() -> None:
     dry_run = os.getenv("PAPER_GACHA_DRY_RUN", "false").lower() == "true"
     if dry_run:
         for category, papers in selections.items():
-            print("\n" + title_list_text(category, papers))
-            for i, paper in enumerate(papers, 1): print("\n" + post_text(paper, i))
+            for i, page in enumerate(category_pages(category, papers)):
+                print("\n" + category_text(category, page, continuation=i > 0))
         return
     handle, password = os.getenv("BLUESKY_HANDLE"), os.getenv("BLUESKY_APP_PASSWORD")
     if not handle or not password: raise RuntimeError("Set BLUESKY_HANDLE and BLUESKY_APP_PASSWORD (or use PAPER_GACHA_DRY_RUN=true).")
     client = Client(); login_with_retry(client, handle, password)
     posted_this_run: set[str] = set()
     for category, papers in selections.items():
-        response = client.send_post(text=title_list_content(category, papers))
-        root_ref = models.ComAtprotoRepoStrongRef.Main(uri=response.uri, cid=response.cid)
-        parent_ref = root_ref
-        print(f"Posted {category} index")
-        for i, paper in enumerate(papers, 1):
+        root_ref = parent_ref = None
+        for i, page in enumerate(category_pages(category, papers)):
             response = client.send_post(
-                text=post_content(paper, i),
-                reply_to=models.AppBskyFeedPost.ReplyRef(root=root_ref, parent=parent_ref),
+                text=category_content(category, page, continuation=i > 0),
+                **({"reply_to": models.AppBskyFeedPost.ReplyRef(root=root_ref, parent=parent_ref)} if parent_ref else {}),
             )
             parent_ref = models.ComAtprotoRepoStrongRef.Main(uri=response.uri, cid=response.cid)
-            posted_this_run.add(paper.uid)
+            root_ref = root_ref or parent_ref
+            posted_this_run.update(paper.uid for paper in page)
             save_history(posted | posted_this_run)
-            print(f"Posted {category} {i}/{len(papers)}: {paper.title}")
+            print(f"Posted {category} page {i + 1}")
 
 
 if __name__ == "__main__":
