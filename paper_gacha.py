@@ -14,7 +14,7 @@ from typing import Iterable
 
 import feedparser
 import requests
-from atproto import Client, models
+from atproto import Client, client_utils, models
 from sentence_transformers import SentenceTransformer, util
 
 ROOT = Path(__file__).parent
@@ -162,15 +162,30 @@ def title_list_text(category: str, papers: list[Paper]) -> str:
     return "\n".join(lines)
 
 
-def post_text(paper: Paper, category: str, number: int, total: int) -> str:
+def post_parts(paper: Paper, number: int) -> tuple[str, str, str, str]:
     fields = (", ".join(paper.fields[:3]) or "研究論文")[:55]
     year = paper.published[:4] if re.fullmatch(r"\d{4}", paper.published[:4]) else "n.d."
-    fixed = f"{category} {number}/{total} · {year}\nFields: {fields}\n{paper.url}"
-    budget = max(40, 300 - len(fixed) - len("\n要約: \n"))
+    fixed = f"{number}  ({year})\n\nAbst: \n\nFields: {fields}"
+    budget = max(40, 300 - len(fixed) - len("\n\n"))
     title = paper.title[: min(110, budget // 2)].rstrip() + ("…" if len(paper.title) > min(110, budget // 2) else "")
     summary_budget = max(25, budget - len(title) - 1)
     summary = one_sentence(paper.abstract)[:summary_budget].rstrip() + ("…" if len(one_sentence(paper.abstract)) > summary_budget else "")
-    return f"{category} {number}/{total} · {year}\n{title}\n{summary}\nFields: {fields}\n{paper.url}"
+    return title, year, summary, fields
+
+
+def post_text(paper: Paper, number: int) -> str:
+    """Plain-text preview used for dry runs."""
+    title, year, summary, fields = post_parts(paper, number)
+    return f"{number} {title} ({year})\n\nAbst: {summary}\n\nFields: {fields}"
+
+
+def post_content(paper: Paper, number: int) -> client_utils.TextBuilder:
+    """Make the title, rather than a raw URL, the clickable paper link."""
+    title, year, summary, fields = post_parts(paper, number)
+    return (client_utils.TextBuilder()
+            .text(f"{number} ")
+            .link(title, paper.url)
+            .text(f" ({year})\n\nAbst: {summary}\n\nFields: {fields}"))
 
 
 def load_history() -> set[str]:
@@ -216,7 +231,7 @@ def main() -> None:
     if dry_run:
         for category, papers in selections.items():
             print("\n" + title_list_text(category, papers))
-            for i, paper in enumerate(papers, 1): print("\n" + post_text(paper, category, i, len(papers)))
+            for i, paper in enumerate(papers, 1): print("\n" + post_text(paper, i))
         return
     handle, password = os.getenv("BLUESKY_HANDLE"), os.getenv("BLUESKY_APP_PASSWORD")
     if not handle or not password: raise RuntimeError("Set BLUESKY_HANDLE and BLUESKY_APP_PASSWORD (or use PAPER_GACHA_DRY_RUN=true).")
@@ -229,7 +244,7 @@ def main() -> None:
         print(f"Posted {category} index")
         for i, paper in enumerate(papers, 1):
             response = client.send_post(
-                text=post_text(paper, category, i, len(papers)),
+                text=post_content(paper, i),
                 reply_to=models.AppBskyFeedPost.ReplyRef(root=root_ref, parent=parent_ref),
             )
             parent_ref = models.ComAtprotoRepoStrongRef.Main(uri=response.uri, cid=response.cid)
