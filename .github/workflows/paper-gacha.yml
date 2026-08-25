@@ -1,6 +1,11 @@
 name: Paper Gacha
 
 on:
+  pull_request:
+    paths:
+      - "paper_gacha.py"
+      - "requirements.txt"
+      - ".github/workflows/paper-gacha.yml"
   schedule:
     # GitHub Actions uses UTC. 00:00 UTC is 09:00 in JST (UTC+9).
     - cron: "0 0 * * *"
@@ -23,7 +28,8 @@ jobs:
       PAPER_GACHA_EXPERTISE: ${{ vars.PAPER_GACHA_EXPERTISE }}
       PAPER_GACHA_RELATED: ${{ vars.PAPER_GACHA_RELATED }}
       SEMANTIC_SCHOLAR_API_KEY: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
-      PAPER_GACHA_DRY_RUN: ${{ inputs.dry_run || 'false' }}
+      # Pull requests are always safe previews: never post or update history.
+      PAPER_GACHA_DRY_RUN: ${{ github.event_name == 'pull_request' && 'true' || inputs.dry_run || 'false' }}
       HF_HOME: ${{ github.workspace }}/.cache/huggingface
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +44,7 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python paper_gacha.py
       - name: Save posted-paper history
-        if: ${{ inputs.dry_run != true }}
+        if: ${{ github.event_name != 'pull_request' && inputs.dry_run != true }}
         run: |
           git config user.name "paper-gacha[bot]"
           git config user.email "paper-gacha[bot]@users.noreply.github.com"
