@@ -14,7 +14,7 @@ from typing import Iterable
 
 import feedparser
 import requests
-from atproto import Client
+from atproto import Client, models
 from sentence_transformers import SentenceTransformer, util
 
 ROOT = Path(__file__).parent
@@ -194,13 +194,19 @@ def main() -> None:
     handle, password = os.getenv("BLUESKY_HANDLE"), os.getenv("BLUESKY_APP_PASSWORD")
     if not handle or not password: raise RuntimeError("Set BLUESKY_HANDLE and BLUESKY_APP_PASSWORD (or use PAPER_GACHA_DRY_RUN=true).")
     client = Client(); client.login(handle, password)
-    parent = None
+    root_ref = None
+    parent_ref = None
+    posted_this_run: set[str] = set()
     for i, (category, paper) in enumerate(selections, 1):
         kwargs = {"text": post_text(paper, category, i)}
-        if parent: kwargs["reply_to"] = parent
-        parent = client.send_post(**kwargs)
+        if parent_ref:
+            kwargs["reply_to"] = models.AppBskyFeedPost.ReplyRef(root=root_ref, parent=parent_ref)
+        response = client.send_post(**kwargs)
+        parent_ref = models.ComAtprotoRepoStrongRef.Main(uri=response.uri, cid=response.cid)
+        root_ref = root_ref or parent_ref
+        posted_this_run.add(paper.uid)
+        save_history(posted | posted_this_run)
         print(f"Posted {i}/10: {paper.title}")
-    save_history(posted | {p.uid for _, p in selections})
 
 
 if __name__ == "__main__":
