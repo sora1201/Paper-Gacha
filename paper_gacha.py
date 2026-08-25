@@ -175,6 +175,20 @@ def save_history(history: set[str]) -> None:
     HISTORY_FILE.write_text(json.dumps(sorted(history)[-5000:], ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def login_with_retry(client: Client, handle: str, password: str, attempts: int = 3) -> None:
+    """Retry only login: retrying a timed-out post could duplicate a Bluesky post."""
+    for attempt in range(1, attempts + 1):
+        try:
+            client.login(handle, password)
+            return
+        except Exception as exc:
+            if attempt == attempts:
+                raise
+            delay = 5 * (2 ** (attempt - 1))
+            print(f"Warning: Bluesky login failed ({exc}); retrying in {delay}s ({attempt}/{attempts})")
+            time.sleep(delay)
+
+
 def main() -> None:
     posted = load_history()
     print("Collecting papers from public APIs…")
@@ -193,7 +207,7 @@ def main() -> None:
         return
     handle, password = os.getenv("BLUESKY_HANDLE"), os.getenv("BLUESKY_APP_PASSWORD")
     if not handle or not password: raise RuntimeError("Set BLUESKY_HANDLE and BLUESKY_APP_PASSWORD (or use PAPER_GACHA_DRY_RUN=true).")
-    client = Client(); client.login(handle, password)
+    client = Client(); login_with_retry(client, handle, password)
     root_ref = None
     parent_ref = None
     posted_this_run: set[str] = set()
