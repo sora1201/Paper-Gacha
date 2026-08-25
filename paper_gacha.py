@@ -155,8 +155,9 @@ def title_list_text(category: str, papers: list[Paper]) -> str:
     """Build a compact category index that stays within Bluesky's post limit."""
     lines = [f"🎲 Paper Gacha — {category} ({len(papers)})"]
     for number, paper in enumerate(papers, 1):
-        available = max(24, 290 - len("\n".join(lines)) - len(f"\n{number}. "))
-        title = paper.title[:available].rstrip()
+        # Four 42-character titles plus the heading remain well under the
+        # 300-grapheme Bluesky limit, including emoji and line breaks.
+        title = paper.title[:42].rstrip()
         lines.append(f"{number}. {title}{'…' if len(title) < len(paper.title) else ''}")
     return "\n".join(lines)
 
