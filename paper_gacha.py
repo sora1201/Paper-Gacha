@@ -8,7 +8,7 @@ import random
 import re
 import time
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable
 
@@ -72,17 +72,24 @@ def arxiv(query: str, limit: int = 35) -> list[Paper]:
 def openalex(query: str, limit: int = 35) -> list[Paper]:
     response = requests.get("https://api.openalex.org/works", params={
         "search": query, "per-page": limit, "sort": "publication_date:desc",
-        "filter": f"from_publication_date:{(datetime.now(timezone.utc)-timedelta(days=365)).date()}",
+        "filter": f"from_publication_date:{(datetime.now(timezone.utc)-timedelta(days=365)).date()},to_publication_date:{datetime.now(timezone.utc).date()}",
     }, headers=HEADERS, timeout=30)
     response.raise_for_status()
     papers = []
     for work in response.json().get("results", []):
+        if work.get("type") not in {"article", "preprint"}:
+            continue
+        published = work.get("publication_date", "")
+        if published and published > str(date.today()):
+            continue
         inverted = work.get("abstract_inverted_index") or {}
         words = sorted(((pos, word) for word, positions in inverted.items() for pos in positions))
         abstract = " ".join(word for _, word in words)
         concepts = [c["display_name"] for c in work.get("concepts", [])[:4]]
+        location = work.get("best_oa_location") or {}
+        url = location.get("pdf_url") or location.get("landing_page_url") or work.get("doi") or work.get("id")
         papers.append(Paper(f"openalex:{work['id'].rsplit('/', 1)[-1]}", clean(work.get("title", "")), clean(abstract),
-                            work.get("doi") or work.get("id"), concepts, "OpenAlex", work.get("publication_date", "")))
+                            url, concepts, "OpenAlex", published))
     return papers
 
 
@@ -114,7 +121,8 @@ def unique(papers: Iterable[Paper], posted: set[str]) -> list[Paper]:
     seen, kept = set(), []
     for p in papers:
         key = re.sub(r"[^a-z0-9]", "", p.title.lower())[:100]
-        if p.uid not in posted and key and key not in seen and len(p.abstract) > 30:
+        future_dated = bool(p.published and p.published[:10] > str(date.today()))
+        if p.uid not in posted and key and key not in seen and len(p.abstract) > 30 and not future_dated:
             seen.add(key); kept.append(p)
     return kept
 
@@ -158,8 +166,19 @@ def title_list_text(category: str, papers: list[Paper]) -> str:
         # Four 42-character titles plus the heading remain well under the
         # 300-grapheme Bluesky limit, including emoji and line breaks.
         title = paper.title[:42].rstrip()
-        lines.append(f"{number}. {title}{'…' if len(title) < len(paper.title) else ''}")
+        year = paper.published[:4] if re.fullmatch(r"\d{4}", paper.published[:4]) else "n.d."
+        lines.append(f"• {title}{'…' if len(title) < len(paper.title) else ''} ({year})")
     return "\n".join(lines)
+
+
+def title_list_content(category: str, papers: list[Paper]) -> client_utils.TextBuilder:
+    """Create a category index with every title linked to its paper."""
+    content = client_utils.TextBuilder().text(f"🎲 Paper Gacha — {category} ({len(papers)})")
+    for paper in papers:
+        title = paper.title[:42].rstrip()
+        year = paper.published[:4] if re.fullmatch(r"\d{4}", paper.published[:4]) else "n.d."
+        content.text("\n• ").link(title + ("…" if len(title) < len(paper.title) else ""), paper.url).text(f" ({year})")
+    return content
 
 
 def post_parts(paper: Paper, number: int) -> tuple[str, str, str, str]:
@@ -238,7 +257,7 @@ def main() -> None:
     client = Client(); login_with_retry(client, handle, password)
     posted_this_run: set[str] = set()
     for category, papers in selections.items():
-        response = client.send_post(text=title_list_text(category, papers))
+        response = client.send_post(text=title_list_content(category, papers))
         root_ref = models.ComAtprotoRepoStrongRef.Main(uri=response.uri, cid=response.cid)
         parent_ref = root_ref
         print(f"Posted {category} index")
