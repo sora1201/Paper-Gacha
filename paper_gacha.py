@@ -151,17 +151,25 @@ def one_sentence(abstract: str) -> str:
     return sentence[:180].rstrip(" ,;:") + ("…" if len(sentence) > 180 else "")
 
 
-def post_text(paper: Paper, category: str, number: int) -> str:
+def title_list_text(category: str, papers: list[Paper]) -> str:
+    """Build a compact category index that stays within Bluesky's post limit."""
+    lines = [f"🎲 Paper Gacha — {category} ({len(papers)})"]
+    for number, paper in enumerate(papers, 1):
+        available = max(24, 290 - len("\n".join(lines)) - len(f"\n{number}. "))
+        title = paper.title[:available].rstrip()
+        lines.append(f"{number}. {title}{'…' if len(title) < len(paper.title) else ''}")
+    return "\n".join(lines)
+
+
+def post_text(paper: Paper, category: str, number: int, total: int) -> str:
     fields = (", ".join(paper.fields[:3]) or "研究論文")[:55]
-    reason = {"専門": "研究テーマとの類似度が高い", "関連": "周辺領域との接点がある", "異分野": "視点を広げる異分野の一冊"}[category]
-    # Keep the URL intact: cutting a 300-character post from the end can make
-    # the most important part (the paper link) unusable.
-    fixed = f"🎲 Paper Gacha {number}/10｜{category}\n理由: {reason}\n分野: {fields}\n{paper.url}"
+    year = paper.published[:4] if re.fullmatch(r"\d{4}", paper.published[:4]) else "n.d."
+    fixed = f"{category} {number}/{total} · {year}\nFields: {fields}\n{paper.url}"
     budget = max(40, 300 - len(fixed) - len("\n要約: \n"))
     title = paper.title[: min(110, budget // 2)].rstrip() + ("…" if len(paper.title) > min(110, budget // 2) else "")
     summary_budget = max(25, budget - len(title) - 1)
     summary = one_sentence(paper.abstract)[:summary_budget].rstrip() + ("…" if len(one_sentence(paper.abstract)) > summary_budget else "")
-    return f"🎲 Paper Gacha {number}/10｜{category}\n{title}\n要約: {summary}\n理由: {reason}\n分野: {fields}\n{paper.url}"
+    return f"{category} {number}/{total} · {year}\n{title}\n{summary}\nFields: {fields}\n{paper.url}"
 
 
 def load_history() -> set[str]:
@@ -196,31 +204,37 @@ def main() -> None:
     related = unique(fetch(" ".join(RELATED)), posted)
     diverse = {field: unique(fetch(query, 15), posted) for field, query in DIVERSE.items()}
     model = SentenceTransformer(MODEL_NAME)
-    selections = [("専門", p) for p in ranked(expert, EXPERTISE, 4, model)]
-    selections += [("関連", p) for p in ranked(related, RELATED, 3, model)]
-    selections += [("異分野", p) for p in diverse_pick(diverse, 3)]
-    if len(selections) != 10:
-        raise RuntimeError(f"Only selected {len(selections)} papers; retry later or broaden your query settings.")
+    selections = {
+        "Core": ranked(expert, EXPERTISE, 4, model),
+        "Related": ranked(related, RELATED, 3, model),
+        "Serendipity": diverse_pick(diverse, 3),
+    }
+    if sum(len(papers) for papers in selections.values()) != 10:
+        raise RuntimeError("Only selected fewer than 10 papers; retry later or broaden your query settings.")
     dry_run = os.getenv("PAPER_GACHA_DRY_RUN", "false").lower() == "true"
     if dry_run:
-        for i, (category, paper) in enumerate(selections, 1): print("\n" + post_text(paper, category, i))
+        for category, papers in selections.items():
+            print("\n" + title_list_text(category, papers))
+            for i, paper in enumerate(papers, 1): print("\n" + post_text(paper, category, i, len(papers)))
         return
     handle, password = os.getenv("BLUESKY_HANDLE"), os.getenv("BLUESKY_APP_PASSWORD")
     if not handle or not password: raise RuntimeError("Set BLUESKY_HANDLE and BLUESKY_APP_PASSWORD (or use PAPER_GACHA_DRY_RUN=true).")
     client = Client(); login_with_retry(client, handle, password)
-    root_ref = None
-    parent_ref = None
     posted_this_run: set[str] = set()
-    for i, (category, paper) in enumerate(selections, 1):
-        kwargs = {"text": post_text(paper, category, i)}
-        if parent_ref:
-            kwargs["reply_to"] = models.AppBskyFeedPost.ReplyRef(root=root_ref, parent=parent_ref)
-        response = client.send_post(**kwargs)
-        parent_ref = models.ComAtprotoRepoStrongRef.Main(uri=response.uri, cid=response.cid)
-        root_ref = root_ref or parent_ref
-        posted_this_run.add(paper.uid)
-        save_history(posted | posted_this_run)
-        print(f"Posted {i}/10: {paper.title}")
+    for category, papers in selections.items():
+        response = client.send_post(text=title_list_text(category, papers))
+        root_ref = models.ComAtprotoRepoStrongRef.Main(uri=response.uri, cid=response.cid)
+        parent_ref = root_ref
+        print(f"Posted {category} index")
+        for i, paper in enumerate(papers, 1):
+            response = client.send_post(
+                text=post_text(paper, category, i, len(papers)),
+                reply_to=models.AppBskyFeedPost.ReplyRef(root=root_ref, parent=parent_ref),
+            )
+            parent_ref = models.ComAtprotoRepoStrongRef.Main(uri=response.uri, cid=response.cid)
+            posted_this_run.add(paper.uid)
+            save_history(posted | posted_this_run)
+            print(f"Posted {category} {i}/{len(papers)}: {paper.title}")
 
 
 if __name__ == "__main__":
