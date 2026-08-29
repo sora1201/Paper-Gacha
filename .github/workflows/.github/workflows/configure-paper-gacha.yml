@@ -1,0 +1,93 @@
+name: Configure Paper Gacha
+
+on:
+  workflow_dispatch:
+    inputs:
+      expertise:
+        description: "Core research themes (comma-separated)"
+        required: true
+        default: "bioinspired robotics, soft robotics, humanoid locomotion, compliant robotic foot"
+        type: string
+      related:
+        description: "Related research themes (comma-separated)"
+        required: true
+        default: "biomimetics, biomechanics, legged robotics, soft actuators, tactile sensing"
+        type: string
+      core_count:
+        description: "Number of Core papers"
+        required: true
+        default: "4"
+        type: string
+      related_count:
+        description: "Number of Related papers"
+        required: true
+        default: "3"
+        type: string
+      serendipity_count:
+        description: "Number of Serendipity papers"
+        required: true
+        default: "3"
+        type: string
+      lookback_days:
+        description: "Search papers published within this many days"
+        required: true
+        default: "365"
+        type: string
+      biology:
+        description: "Include biology in Serendipity"
+        required: true
+        default: true
+        type: boolean
+      physics:
+        description: "Include physics in Serendipity"
+        required: true
+        default: true
+        type: boolean
+      history:
+        description: "Include history in Serendipity"
+        required: true
+        default: true
+        type: boolean
+      culture:
+        description: "Include culture in Serendipity"
+        required: true
+        default: true
+        type: boolean
+      language:
+        description: "Include linguistics in Serendipity"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  save:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Save configuration
+        run: |
+          python scripts/configure.py \
+            --expertise '${{ inputs.expertise }}' \
+            --related '${{ inputs.related }}' \
+            --core-count '${{ inputs.core_count }}' \
+            --related-count '${{ inputs.related_count }}' \
+            --serendipity-count '${{ inputs.serendipity_count }}' \
+            --lookback-days '${{ inputs.lookback_days }}' \
+            --include-biology '${{ inputs.biology }}' \
+            --include-physics '${{ inputs.physics }}' \
+            --include-history '${{ inputs.history }}' \
+            --include-culture '${{ inputs.culture }}' \
+            --include-language '${{ inputs.language }}'
+      - name: Commit configuration
+        run: |
+          git config user.name "paper-gacha[bot]"
+          git config user.email "paper-gacha[bot]@users.noreply.github.com"
+          git add paper_gacha_config.json
+          git diff --cached --quiet || git commit -m "chore: update Paper Gacha settings"
+          git push
