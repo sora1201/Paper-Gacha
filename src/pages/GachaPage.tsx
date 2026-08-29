@@ -65,6 +65,19 @@ export function GachaPage({
           <h1>{t("gacha.title")}</h1>
           <p>{t("gacha.description")}</p>
 
+          <button
+            className={`draw-button gachapon-button ${loading ? "drawing" : ""}`}
+            onClick={draw}
+            disabled={!valid || loading}
+            aria-describedby={!valid ? "gacha-setup-help" : undefined}
+          >
+            <span className="gachapon-handle" aria-hidden="true">
+              <span className="handle-grip" />
+              <RotateCw size={21} />
+            </span>
+            <span>{loading ? t("gacha.drawing") : t("gacha.draw")}</span>
+          </button>
+
           {!valid && (
             <div className="setup-callout" id="gacha-setup-help">
               <strong>{t("gacha.invalidTitle")}</strong>
@@ -82,28 +95,10 @@ export function GachaPage({
           )}
         </div>
 
-        <div className={`gachapon ${loading ? "drawing" : ""}`}>
+        <div className={`hero-art ${loading ? "drawing" : ""}`} aria-hidden="true">
           <span className="art-glow" />
-          <div className="gachapon-dome" aria-hidden="true">
-            <span className="capsule capsule-one" /><span className="capsule capsule-two" />
-            <span className="capsule capsule-three" /><span className="capsule capsule-four" />
-            <img src="/paper-gacha-app-icon.png" alt="" />
-          </div>
-          <div className="gachapon-body">
-            <span className="machine-label">PAPER<br /><strong>GACHA</strong></span>
-            <button
-              className="draw-button"
-              onClick={draw}
-              disabled={!valid || loading}
-              aria-describedby={!valid ? "gacha-setup-help" : undefined}
-            >
-              <span className="handle"><RotateCw size={30} /></span>
-              <span>{loading ? t("gacha.drawing") : t("gacha.draw")}</span>
-            </button>
-            <span className="coin-slot" aria-hidden="true" />
-            <div className="prize-tray" aria-hidden="true"><span /></div>
-          </div>
-          <span className="machine-foot foot-left" /><span className="machine-foot foot-right" />
+          <img src="/paper-gacha-app-icon.png" alt="" />
+          <span className="art-note">OPEN A NEW IDEA</span>
         </div>
       </section>
 
