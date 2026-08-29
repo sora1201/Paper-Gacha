@@ -1,0 +1,42 @@
+name: Report Paper Gacha failures
+
+on:
+  workflow_run:
+    workflows: ["Paper Gacha"]
+    types: [completed]
+
+permissions:
+  issues: write
+
+jobs:
+  create-issue:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const title = `Paper Gacha failed: run #${run.run_number}`;
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            if (existing.some(issue => issue.title === title)) return;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: [
+                'Paper Gacha の実行が失敗しました。',
+                '',
+                `- 実行: ${run.html_url}`,
+                `- ブランチ: ${run.head_branch}`,
+                `- コミット: ${run.head_sha}`,
+                `- 結論: ${run.conclusion}`,
+                '',
+                'ログを確認し、原因を修正するPRを作成してください。',
+              ].join('\\n'),
+            });
