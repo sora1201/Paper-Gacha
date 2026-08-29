@@ -1,4 +1,4 @@
-import { Dices, Settings2, Sparkles } from "lucide-react";
+import { RotateCw, Settings2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -65,25 +65,6 @@ export function GachaPage({
           <h1>{t("gacha.title")}</h1>
           <p>{t("gacha.description")}</p>
 
-          <button
-            className="draw-button"
-            onClick={draw}
-            disabled={!valid || loading}
-            aria-describedby={!valid ? "gacha-setup-help" : undefined}
-          >
-            {loading ? (
-              <>
-                <span className="spinner" />
-                {t("gacha.drawing")}
-              </>
-            ) : (
-              <>
-                <Dices size={22} />
-                {t("gacha.draw")}
-              </>
-            )}
-          </button>
-
           {!valid && (
             <div className="setup-callout" id="gacha-setup-help">
               <strong>{t("gacha.invalidTitle")}</strong>
@@ -101,10 +82,28 @@ export function GachaPage({
           )}
         </div>
 
-        <div className={`hero-art ${loading ? "drawing" : ""}`} aria-hidden="true">
+        <div className={`gachapon ${loading ? "drawing" : ""}`}>
           <span className="art-glow" />
-          <img src="/paper-gacha-app-icon.png" alt="" />
-          <span className="art-note">OPEN A NEW IDEA</span>
+          <div className="gachapon-dome" aria-hidden="true">
+            <span className="capsule capsule-one" /><span className="capsule capsule-two" />
+            <span className="capsule capsule-three" /><span className="capsule capsule-four" />
+            <img src="/paper-gacha-app-icon.png" alt="" />
+          </div>
+          <div className="gachapon-body">
+            <span className="machine-label">PAPER<br /><strong>GACHA</strong></span>
+            <button
+              className="draw-button"
+              onClick={draw}
+              disabled={!valid || loading}
+              aria-describedby={!valid ? "gacha-setup-help" : undefined}
+            >
+              <span className="handle"><RotateCw size={30} /></span>
+              <span>{loading ? t("gacha.drawing") : t("gacha.draw")}</span>
+            </button>
+            <span className="coin-slot" aria-hidden="true" />
+            <div className="prize-tray" aria-hidden="true"><span /></div>
+          </div>
+          <span className="machine-foot foot-left" /><span className="machine-foot foot-right" />
         </div>
       </section>
 
