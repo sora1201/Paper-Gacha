@@ -1,6 +1,6 @@
 # Paper Gacha / 論文ガチャ
 
-A bilingual, local-first paper discovery app powered by OpenAlex. Pick expert, related, and deliberately different topics; Paper Gacha draws new papers without repeating anything previously shown in the browser.
+A bilingual, local-first paper discovery app powered by OpenAlex. Add free-form keywords for expert, related, and deliberately different themes; Paper Gacha draws new papers without repeating anything previously shown in the browser.
 
 ## Development
 
@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-The Vite frontend expects `/api/topics` and `/api/gacha`. For an integrated Cloudflare preview, build and run `npx wrangler dev`.
+The Vite frontend expects `/api/gacha`. For an integrated Cloudflare preview, build and run `npx wrangler dev`.
 
 ## Production
 
