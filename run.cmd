@@ -10,9 +10,8 @@ if not exist "%VENV_PATH%\Scripts\python.exe" (
     echo Python 3.13 64-bit is required. Install it from https://www.python.org/downloads/
     exit /b 1
   )
+  "%VENV_PATH%\Scripts\python.exe" -m pip install -r "%APP_ROOT%requirements.txt"
+  if errorlevel 1 exit /b 1
 )
-
-"%VENV_PATH%\Scripts\python.exe" -m pip install -r "%APP_ROOT%requirements.txt"
-if errorlevel 1 exit /b 1
 
 "%VENV_PATH%\Scripts\python.exe" "%APP_ROOT%desktop_app.py"
