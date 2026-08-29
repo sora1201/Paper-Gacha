@@ -7,7 +7,7 @@ set "VENV_PATH=%APP_ROOT%.venv"
 if not exist "%VENV_PATH%\Scripts\python.exe" (
   py -3.13 -m venv "%VENV_PATH%"
   if errorlevel 1 (
-    echo Python 3.13 (64-bit) is required. Install it from https://www.python.org/downloads/
+    echo Python 3.13 64-bit is required. Install it from https://www.python.org/downloads/
     exit /b 1
   )
 )
