@@ -1,7 +1,7 @@
 <div align="center">
   <img src="public/paper-gacha-app-icon.png" alt="Paper Gacha app icon" width="112" height="112">
 
-  # Paper Gacha
+A bilingual, local-first paper discovery app powered by OpenAlex. Add free-form keywords for expert, related, and deliberately different themes; Paper Gacha draws new papers without repeating anything previously shown in the browser.
 
   **A small discovery, every day.**
 
@@ -61,15 +61,10 @@ For each selected topic, the Cloudflare Worker requests a sample of eligible, no
 git clone <your-fork-or-repository-url>
 cd Paper-Gacha
 npm install
+npm start
 ```
 
-### Run the frontend
-
-```bash
-npm run dev
-```
-
-This starts Vite's development server. The frontend calls the relative endpoints `/api/topics` and `/api/gacha`, so drawing papers requires those routes to be available. Use the integrated Cloudflare preview below to run the UI and API together.
+`npm start` builds the frontend and starts the Cloudflare Worker, including `/api/topics` and `/api/gacha`. For frontend-only development, use `npm run dev`.
 
 ### Run the integrated app locally
 
