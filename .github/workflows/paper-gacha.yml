@@ -58,9 +58,9 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python paper_gacha.py
       - name: Save posted-paper history
-        # Manual runs are previews or experiments. Only the daily schedule
-        # establishes the durable deduplication history.
-        if: ${{ github.event_name == 'schedule' }}
+        # Scheduled runs are durable. A non-posting manual run is also durable
+        # so a Pages-only installation can be initialized on demand.
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false && vars.PAPER_GACHA_POST_TO_BLUESKY == 'false') }}
         run: |
           git config user.name "paper-gacha[bot]"
           git config user.email "paper-gacha[bot]@users.noreply.github.com"
