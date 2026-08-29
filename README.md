@@ -28,6 +28,9 @@ GitHub ActionsやGitHub Pagesを使わず、引きたいときだけ `Gacha!` �
 - **専門 4本**：`PAPER_GACHA_EXPERTISE` に対して `all-MiniLM-L6-v2` の意味類似度で順位付けします。
 - **関連 3本**：`PAPER_GACHA_RELATED` に同じ方法で順位付けします。
 - **異分野 3本**：生物・物理・歴史・文化・言語の候補から、なるべく異なる分野をランダムに選びます。
+To post from the app, enable **Bluesky posting** in Settings, enter your handle and an app password, then finish revealing a draw. Check the individual papers you want to publish and select **Post selected papers to Bluesky**. The app password is used only for the running session and is never saved or included in data exports.
+
+## How it works
 
 各投稿はタイトル、一文要約、選定理由、分野/キーワード、リンクを含みます。`data/posted_papers.json` に投稿済みIDを保存して、次回以降に同じ候補を除外します。投稿ごとにデータを保存するため、GitHub Actionsにはリポジトリへの書き込み権限が必要です。
 
