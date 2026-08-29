@@ -1,4 +1,4 @@
-import { RotateCw, Settings2, Sparkles } from "lucide-react";
+import { Settings2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -72,8 +72,7 @@ export function GachaPage({
             aria-describedby={!valid ? "gacha-setup-help" : undefined}
           >
             <span className="gachapon-handle" aria-hidden="true">
-              <span className="handle-grip" />
-              <RotateCw size={21} />
+              <span className="handle-bar" />
             </span>
             <span>{loading ? t("gacha.drawing") : t("gacha.draw")}</span>
           </button>
