@@ -1,5 +1,26 @@
 # Paper Gacha
 
+## Desktop app (Windows 11)
+
+Python 3.13（64-bit）をインストールしてから、`run.cmd` を実行するとローカルGUI版を起動できます。初回のみPython仮想環境と依存関係、埋め込みモデルを準備します。アプリはPC内に設定・ガチャ履歴・お気に入りを保存し、設定画面からJSONでエクスポート／インポートできます。
+
+```powershell
+.\run.cmd
+```
+
+PowerShellの実行ポリシーを変更してもよければ、従来どおり以下でも起動できます。
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\run.ps1
+```
+
+GitHub ActionsやGitHub Pagesを使わず、引きたいときだけ `Gacha!` を押して論文を選びます。
+
+各回は専門・関連・異分野の順に1枚ずつ公開され、次回以降の候補からは除外されます。履歴から過去の抽選を見直せ、お気に入りは論文ページをすぐ開けます。
+
+## Legacy: GitHub Actions bot
+
 毎朝9:00（日本時間）に、研究論文10本をBlueskyの返信スレッドとして投稿する小さなBotです。無料の公開API（arXiv、OpenAlex、Semantic Scholar）とローカルの無料Embeddingモデルを使います。
 
 ## 内訳と選び方
