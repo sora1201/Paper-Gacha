@@ -45,7 +45,7 @@ For each selected topic, the Cloudflare Worker requests a sample of eligible, no
 | Build | Vite 7 |
 | API | Cloudflare Workers |
 | Research data | OpenAlex API |
-| Persistence | Browser `localStorage` |
+| Persistence | Browser `localStorage`; portable JSON backup export/import |
 | Tests | Vitest |
 
 ## Getting started
@@ -128,6 +128,8 @@ The deploy script builds the frontend before publishing the Worker and its stati
 ## Privacy and data
 
 Paper Gacha has no account system. Its settings, language preference, favorites, draw history, and exclusion list are stored locally in the browser and are not sent to an application database. Topic selections and publication-range settings are sent to the same-origin Worker when searching or drawing; the Worker then queries OpenAlex.
+
+Settings can export or restore a complete JSON backup. Backup files contain keywords, browsing/draw history, favorites, and other preferences in plain text, so store them in a safe place and share them only with people you trust. Importing a backup replaces all current local data.
 
 Clearing site data resets all locally saved information. Because data is device- and browser-specific, it does not automatically sync across devices. Availability and completeness of paper metadata, abstracts, links, and open-access copies depend on OpenAlex and the underlying scholarly sources.
 
