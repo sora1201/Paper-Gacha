@@ -1,0 +1,39 @@
+{
+  "selection": {
+    "core_count": 4,
+    "related_count": 3,
+    "serendipity_count": 3,
+    "candidates_per_source": 35,
+    "serendipity_candidates_per_source": 15,
+    "lookback_days": 365,
+    "minimum_abstract_characters": 30,
+    "keyword_match_bonus": 0.03,
+    "random_seed": null
+  },
+  "posting": {
+    "max_post_characters": 280,
+    "history_limit": 5000
+  },
+  "research": {
+    "expertise": [
+      "bioinspired robotics",
+      "soft robotics",
+      "humanoid locomotion",
+      "compliant robotic foot"
+    ],
+    "related": [
+      "biomimetics",
+      "biomechanics",
+      "legged robotics",
+      "soft actuators",
+      "tactile sensing"
+    ]
+  },
+  "serendipity_topics": {
+    "biology": "biology",
+    "physics": "physics",
+    "history": "history",
+    "culture": "culture",
+    "language": "linguistics"
+  }
+}
