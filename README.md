@@ -14,6 +14,8 @@ The first launch creates a local virtual environment and installs dependencies. 
 
 The app stores settings, draw history, and favorites only on your computer. You can export or import that data as JSON from the Settings tab.
 
+To post from the app, enable **Bluesky posting** in Settings, enter your handle and an app password, then finish revealing a draw. Check the individual papers you want to publish and select **Post selected papers to Bluesky**. The app password is used only for the running session and is never saved or included in data exports.
+
 ## How it works
 
 Configure core themes, related themes, serendipity fields, result counts, and a lookback period in Settings. A draw retrieves candidates from arXiv, OpenAlex, and Semantic Scholar, then presents results one card at a time in this order:
