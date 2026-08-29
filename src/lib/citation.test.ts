@@ -1,5 +1,5 @@
 import { describe,expect,it,vi } from "vitest";
-import { deliverShare,ieeeCitation,shareTextFor } from "./citation";
+import { deliverShare,ieeeCitation,shareTextFor,socialShareUrl } from "./citation";
 import type { Paper } from "../types";
 
 const paper=(changes:Partial<Paper>={}):Paper=>({id:"W1",title:"A useful paper",authors:["A. Author","B. Writer"],year:2024,abstract:null,topics:[],doi:"10.1000/example",landingPageUrl:"https://openalex.org/W1",openAccessUrl:null,citedByCount:0,category:"expert",...changes});
@@ -26,5 +26,13 @@ describe("sharing",()=>{
     const writeText=vi.fn().mockResolvedValue(undefined);
     expect(await deliverShare("reference\n\nnote","Title",{clipboard:{writeText}})).toBe("copied");
     expect(writeText).toHaveBeenCalledWith("reference\n\nnote");
+  });
+  it("builds encoded social share URLs",()=>{
+    const x=new URL(socialShareUrl("x","A paper","https://example.test/paper?a=1"));
+    expect(x.origin+x.pathname).toBe("https://x.com/intent/post");
+    expect(x.searchParams.get("text")).toBe("A paper\n\nhttps://example.test/paper?a=1");
+    const bluesky=new URL(socialShareUrl("bluesky","Already linked https://example.test/paper","https://example.test/paper"));
+    expect(bluesky.searchParams.get("text")).toBe("Already linked https://example.test/paper");
+    expect(new URL(socialShareUrl("linkedin","ignored","https://example.test/paper")).searchParams.get("url")).toBe("https://example.test/paper");
   });
 });
