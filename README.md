@@ -6,10 +6,10 @@ A bilingual, local-first paper discovery app powered by OpenAlex. Pick expert, r
 
 ```bash
 npm install
-npm run dev
+npm start
 ```
 
-The Vite frontend expects `/api/topics` and `/api/gacha`. For an integrated Cloudflare preview, build and run `npx wrangler dev`.
+`npm start` builds the frontend and starts the Cloudflare Worker, including `/api/topics` and `/api/gacha`. For frontend-only development, use `npm run dev`.
 
 ## Production
 
