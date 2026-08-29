@@ -2,10 +2,16 @@
 
 ## Desktop app (Windows 11)
 
-Python 3.13（64-bit）をインストールしてから、`run.ps1` を実行するとローカルGUI版を起動できます。初回のみPython仮想環境と依存関係、埋め込みモデルを準備します。アプリはPC内に設定・ガチャ履歴・お気に入りを保存し、設定画面からJSONでエクスポート／インポートできます。
+Python 3.13（64-bit）をインストールしてから、`run.cmd` を実行するとローカルGUI版を起動できます。初回のみPython仮想環境と依存関係、埋め込みモデルを準備します。アプリはPC内に設定・ガチャ履歴・お気に入りを保存し、設定画面からJSONでエクスポート／インポートできます。
 
 ```powershell
-Set-ExecutionPolicy -Scope Process Bypass
+.\run.cmd
+```
+
+PowerShellの実行ポリシーを変更してもよければ、従来どおり以下でも起動できます。
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\run.ps1
 ```
 
