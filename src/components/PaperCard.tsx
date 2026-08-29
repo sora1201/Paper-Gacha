@@ -1,7 +1,8 @@
 import { useEffect,useRef,useState } from "react";
 import { ArrowUpRight,Heart,Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { deliverShare,ieeeCitation,shareTextFor } from "../lib/citation";
+import { deliverShare,ieeeCitation,shareTextFor,socialShareUrl } from "../lib/citation";
+import type { SocialShareTarget } from "../lib/citation";
 import type { Paper } from "../types";
 
 const urlFor=(paper:Paper)=>paper.openAccessUrl||(paper.doi?`https://doi.org/${paper.doi}`:paper.landingPageUrl);
@@ -34,6 +35,10 @@ export function PaperCard({paper,isFavorite,onFavorite,onToast}:{paper:Paper;isF
       if((error as Error).name!=="AbortError")onToast(t("common.shareFailed"));
     }
   }
+  function shareTo(target:SocialShareTarget){
+    window.open(socialShareUrl(target,shareTextFor(paper,memo),url),"_blank","noopener,noreferrer");
+    setShareOpen(false);
+  }
 
   return <>
     <article className={`paper-card ${paper.category}`}>
@@ -47,11 +52,15 @@ export function PaperCard({paper,isFavorite,onFavorite,onToast}:{paper:Paper;isF
     </article>
     {shareOpen&&<div className="share-modal-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)closeShare();}}>
       <div className="share-modal" role="dialog" aria-modal="true" aria-labelledby={`share-title-${paper.id}`}>
-        <h2 id={`share-title-${paper.id}`}>{t("share.content")}</h2>
+        <h2 id={`share-title-${paper.id}`}>{t("share.title")}</h2>
+        <p className="share-description">{t("share.description")}</p>
         <div className="citation-preview" aria-label={t("share.preview")}>{citation}</div>
         <label htmlFor={`share-memo-${paper.id}`}>{t("share.memo")}</label>
         <textarea ref={memoRef} id={`share-memo-${paper.id}`} value={memo} onChange={event=>setMemo(event.target.value)} rows={5} placeholder={t("share.memoPlaceholder")}/>
-        <div className="share-modal-actions"><button className="cancel" onClick={closeShare}>{t("share.cancel")}</button><button className="confirm" onClick={share}><Share2 size={17}/>{t("share.submit")}</button></div>
+        <fieldset className="share-destinations"><legend>{t("share.destination")}</legend><div className="share-destination-grid">
+          {(["x","bluesky","linkedin","facebook"] as SocialShareTarget[]).map(target=><button key={target} onClick={()=>shareTo(target)}><span className={`social-mark ${target}`} aria-hidden="true">{target==="x"?"X":target==="bluesky"?"☁":target==="linkedin"?"in":"f"}</span>{t(`share.targets.${target}`)}</button>)}
+        </div></fieldset>
+        <div className="share-modal-actions"><button className="cancel" onClick={closeShare}>{t("share.cancel")}</button><button className="confirm" onClick={share}><Share2 size={17}/>{t("share.native")}</button></div>
       </div>
     </div>}
   </>;

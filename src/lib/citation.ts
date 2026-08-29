@@ -33,6 +33,25 @@ export function shareTextFor(paper:Paper,memo:string):string {
   return memo.trim()?`${citation}\n\n${memo.trim()}`:citation;
 }
 
+export type SocialShareTarget="x"|"bluesky"|"linkedin"|"facebook";
+
+/** Build a web share URL for a supported social network. */
+export function socialShareUrl(target:SocialShareTarget,text:string,url?:string|null):string {
+  const paperUrl=url||"";
+  const fullText=paperUrl&&!text.includes(paperUrl)?`${text}\n\n${paperUrl}`:text;
+  const params=new URLSearchParams();
+  if(target==="x"){
+    params.set("text",fullText);
+    return `https://x.com/intent/post?${params}`;
+  }
+  if(target==="bluesky"){
+    params.set("text",fullText);
+    return `https://bsky.app/intent/compose?${params}`;
+  }
+  params.set("url",paperUrl);
+  return target==="linkedin"?`https://www.linkedin.com/sharing/share-offsite/?${params}`:`https://www.facebook.com/sharer/sharer.php?${params}`;
+}
+
 type ShareNavigator={share?:(data:{title:string;text:string})=>Promise<void>;clipboard?:{writeText:(text:string)=>Promise<void>}};
 export async function deliverShare(text:string,title:string,navigation:ShareNavigator=navigator):Promise<"shared"|"copied"> {
   if(navigation.share){await navigation.share({title,text});return "shared";}
