@@ -2,6 +2,10 @@ node_modules
 dist
 .wrangler
 *.tsbuildinfo
+src/**/*.js
+src/**/*.d.ts
+worker/**/*.js
+worker/**/*.d.ts
 vite.config.js
 vite.config.d.ts
 .DS_Store
