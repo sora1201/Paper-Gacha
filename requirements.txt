@@ -1,6 +1,0 @@
-atproto>=0.0.62
-feedparser>=6.0.11
-requests>=2.32.0
-sentence-transformers>=3.0.1
-torch>=2.3.0
-PySide6>=6.8.0
