@@ -1,5 +1,5 @@
 export type PaperCategory = "expert" | "related" | "other";
-export type Paper = { id:string; title:string; authors:string[]; year:number|null; abstract:string|null; topics:{id:string;name:string}[]; doi:string|null; landingPageUrl:string|null; openAccessUrl:string|null; citedByCount:number; category:PaperCategory };
+export type Paper = { id:string; title:string; authors:string[]; year:number|null; abstract:string|null; topics:{id:string;name:string}[]; doi:string|null; landingPageUrl:string|null; openAccessUrl:string|null; citedByCount:number; category:PaperCategory; venue?:string|null; volume?:string|null; issue?:string|null; firstPage?:string|null; lastPage?:string|null; publicationDate?:string|null };
 export type SelectedTopic = { id:string; name:string };
 export type GachaSettings = { expertTopics:SelectedTopic[]; relatedTopics:SelectedTopic[]; otherTopics:SelectedTopic[]; expertCount:number; relatedCount:number; otherCount:number; publicationYears:1|3|5|10|null };
 export type Language = "ja"|"en";
