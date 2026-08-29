@@ -18,9 +18,23 @@
    - `BLUESKY_HANDLE` — 例: `your-bot.bsky.social`
    - `BLUESKY_APP_PASSWORD` — BlueskyのApp Password
    - `SEMANTIC_SCHOLAR_API_KEY` — 任意。未設定でも実行します。
-4. 同じ画面の **Variables** に、次を追加します。
-   - `PAPER_GACHA_EXPERTISE` — 例: `robotics, robot learning, embodied AI`
-   - `PAPER_GACHA_RELATED` — 例: `computer vision, reinforcement learning, human-robot interaction`
+4. 同じ画面の **Variables** で、論文選定を設定します。未設定の値は既定値を使います。
+
+   | Variable | 既定値 | 説明 |
+   | --- | --- | --- |
+   | `PAPER_GACHA_EXPERTISE` | `robotics, robot learning, embodied AI` | 専門テーマ（カンマ区切り） |
+   | `PAPER_GACHA_RELATED` | `computer vision, reinforcement learning, human-robot interaction` | 関連テーマ（カンマ区切り） |
+   | `PAPER_GACHA_CORE_COUNT` | `4` | 専門論文の本数 |
+   | `PAPER_GACHA_RELATED_COUNT` | `3` | 関連論文の本数 |
+   | `PAPER_GACHA_SERENDIPITY_COUNT` | `3` | 異分野論文の本数 |
+   | `PAPER_GACHA_LOOKBACK_DAYS` | `365` | 検索対象を遡る日数。各APIで公開日がある論文に適用 |
+   | `PAPER_GACHA_SERENDIPITY_TOPICS` | `biology,physics,history,culture,language` | 異分野テーマ。選べる値は `biology`、`physics`、`history`、`culture`、`language` |
+   | `PAPER_GACHA_CANDIDATES_PER_SOURCE` | `35` | 専門・関連で各データソースから取得する候補数 |
+   | `PAPER_GACHA_SERENDIPITY_CANDIDATES_PER_SOURCE` | `15` | 異分野で各データソースから取得する候補数 |
+   | `PAPER_GACHA_MINIMUM_ABSTRACT_CHARACTERS` | `30` | 候補に必要な要旨の最小文字数 |
+   | `PAPER_GACHA_KEYWORD_MATCH_BONUS` | `0.03` | テーマ語が明示的に含まれる論文への加点 |
+   | `PAPER_GACHA_MAX_POST_CHARACTERS` | `280` | Bluesky投稿を分割する基準文字数 |
+   | `PAPER_GACHA_HISTORY_LIMIT` | `5000` | 重複防止のために保持する投稿済み論文ID数 |
 5. Actionsの `Paper Gacha` を手動実行し、最初は `dry_run` をオンにして候補を確認します。
 
 スケジュールはGitHub ActionsがUTCで解釈するため、`0 0 * * *` は日本時間9:00です。GitHub Actionsのスケジュール実行は、混雑時に多少遅れることがあります。
@@ -47,7 +61,7 @@ python paper_gacha.py
 
 - 研究テーマを変える: `PAPER_GACHA_EXPERTISE` のカンマ区切り語句を変更。
 - 関連の広さを変える: `PAPER_GACHA_RELATED` を変更。
-- 異分野を変える: `paper_gacha.py` の `DIVERSE` に検索語を追加・変更。
+- 異分野を変える: `PAPER_GACHA_SERENDIPITY_TOPICS` を変更。
 - 類似度モデルを変える: `MODEL_NAME` をHugging FaceのSentence Transformers互換モデル名に変更。小さく無料の現行モデルを保つなら既定値がおすすめです。
 
 ## 運用上の注意

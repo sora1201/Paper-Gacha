@@ -36,18 +36,50 @@ class Paper:
 
 
 def env_list(name: str, default: str) -> list[str]:
-    return [x.strip() for x in os.getenv(name, default).split(",") if x.strip()]
+    values = [x.strip() for x in (os.getenv(name) or default).split(",") if x.strip()]
+    if not values:
+        raise RuntimeError(f"{name} must contain at least one comma-separated value.")
+    return values
 
 
-EXPERTISE = env_list("PAPER_GACHA_EXPERTISE", "robotics, robot learning, embodied AI")
-RELATED = env_list("PAPER_GACHA_RELATED", "computer vision, reinforcement learning, human-robot interaction")
-DIVERSE = {
+def env_positive_int(name: str, default: int) -> int:
+    value = os.getenv(name) or str(default)
+    try:
+        number = int(value)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be a positive integer, got {value!r}.") from exc
+    if number < 1:
+        raise RuntimeError(f"{name} must be a positive integer, got {value!r}.")
+    return number
+
+
+def env_non_negative_float(name: str, default: float) -> float:
+    value = os.getenv(name) or str(default)
+    try:
+        number = float(value)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be a non-negative number, got {value!r}.") from exc
+    if number < 0:
+        raise RuntimeError(f"{name} must be a non-negative number, got {value!r}.")
+    return number
+
+
+DIVERSE_TOPICS = {
     "biology": "biology",
     "physics": "physics",
     "history": "history",
     "culture": "culture",
     "language": "linguistics",
 }
+
+
+def env_diverse_topics() -> dict[str, str]:
+    names = env_list("PAPER_GACHA_SERENDIPITY_TOPICS", ",".join(DIVERSE_TOPICS))
+    unknown = sorted(set(names) - set(DIVERSE_TOPICS))
+    if unknown:
+        choices = ", ".join(DIVERSE_TOPICS)
+        raise RuntimeError(f"PAPER_GACHA_SERENDIPITY_TOPICS contains unknown topics: {', '.join(unknown)}. Choose from: {choices}.")
+    return {name: DIVERSE_TOPICS[name] for name in names}
 
 
 def clean(value: str) -> str:
@@ -69,10 +101,10 @@ def arxiv(query: str, limit: int = 35) -> list[Paper]:
     ) for entry in feed.entries]
 
 
-def openalex(query: str, limit: int = 35) -> list[Paper]:
+def openalex(query: str, limit: int, lookback_days: int) -> list[Paper]:
     response = requests.get("https://api.openalex.org/works", params={
         "search": query, "per-page": limit, "sort": "publication_date:desc",
-        "filter": f"from_publication_date:{(datetime.now(timezone.utc)-timedelta(days=365)).date()},to_publication_date:{datetime.now(timezone.utc).date()}",
+        "filter": f"from_publication_date:{(datetime.now(timezone.utc)-timedelta(days=lookback_days)).date()},to_publication_date:{datetime.now(timezone.utc).date()}",
     }, headers=HEADERS, timeout=30)
     response.raise_for_status()
     papers = []
@@ -106,28 +138,30 @@ def semantic_scholar(query: str, limit: int = 35) -> list[Paper]:
                   "Semantic Scholar", p.get("publicationDate") or "") for p in response.json().get("data", [])]
 
 
-def fetch(query: str, limit: int = 35) -> list[Paper]:
+def fetch(query: str, limit: int, lookback_days: int) -> list[Paper]:
     results: list[Paper] = []
     for source in (arxiv, openalex, semantic_scholar):
         try:
-            results.extend(source(query, limit))
+            papers = openalex(query, limit, lookback_days) if source is openalex else source(query, limit)
+            cutoff = str(date.today() - timedelta(days=lookback_days))
+            results.extend(paper for paper in papers if not paper.published or paper.published[:10] >= cutoff)
         except requests.RequestException as exc:
             print(f"Warning: {source.__name__} failed for {query}: {exc}")
         time.sleep(1)
     return results
 
 
-def unique(papers: Iterable[Paper], posted: set[str]) -> list[Paper]:
+def unique(papers: Iterable[Paper], posted: set[str], minimum_abstract_characters: int) -> list[Paper]:
     seen, kept = set(), []
     for p in papers:
         key = re.sub(r"[^a-z0-9]", "", p.title.lower())[:100]
         future_dated = bool(p.published and p.published[:10] > str(date.today()))
-        if p.uid not in posted and key and key not in seen and len(p.abstract) > 30 and not future_dated:
+        if p.uid not in posted and key and key not in seen and len(p.abstract) > minimum_abstract_characters and not future_dated:
             seen.add(key); kept.append(p)
     return kept
 
 
-def ranked(papers: list[Paper], profile: list[str], count: int, model: SentenceTransformer) -> list[Paper]:
+def ranked(papers: list[Paper], profile: list[str], count: int, keyword_match_bonus: float, model: SentenceTransformer) -> list[Paper]:
     if not papers:
         return []
     query = " ".join(profile)
@@ -136,7 +170,7 @@ def ranked(papers: list[Paper], profile: list[str], count: int, model: SentenceT
     for p, score in zip(papers, similarities):
         # Small transparent bonus for explicit keyword matches.
         text = (p.title + " " + p.abstract).lower()
-        p.score = float(score) + 0.03 * sum(term.lower() in text for term in profile)
+        p.score = float(score) + keyword_match_bonus * sum(term.lower() in text for term in profile)
     return sorted(papers, key=lambda p: p.score, reverse=True)[:count]
 
 
@@ -165,7 +199,7 @@ def paper_line(paper: Paper) -> str:
     return f"• {paper.title} ({year})\n  • {fields}"
 
 
-def category_pages(category: str, papers: list[Paper], limit: int = 280) -> list[list[Paper]]:
+def category_pages(category: str, papers: list[Paper], limit: int) -> list[list[Paper]]:
     """Split only between papers; never shorten a title, year, or keyword."""
     pages, current = [], []
     heading = f"Paper Gacha ~{category}~"
@@ -202,9 +236,9 @@ def load_history() -> set[str]:
     return set(json.loads(HISTORY_FILE.read_text(encoding="utf-8")))
 
 
-def save_history(history: set[str]) -> None:
+def save_history(history: set[str], history_limit: int) -> None:
     # Retain enough history for durable deduplication without endlessly growing the repo.
-    HISTORY_FILE.write_text(json.dumps(sorted(history)[-5000:], ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    HISTORY_FILE.write_text(json.dumps(sorted(history)[-history_limit:], ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def login_with_retry(client: Client, handle: str, password: str, attempts: int = 3) -> None:
@@ -222,23 +256,37 @@ def login_with_retry(client: Client, handle: str, password: str, attempts: int =
 
 
 def main() -> None:
+    expertise = env_list("PAPER_GACHA_EXPERTISE", "robotics, robot learning, embodied AI")
+    related = env_list("PAPER_GACHA_RELATED", "computer vision, reinforcement learning, human-robot interaction")
+    core_count = env_positive_int("PAPER_GACHA_CORE_COUNT", 4)
+    related_count = env_positive_int("PAPER_GACHA_RELATED_COUNT", 3)
+    serendipity_count = env_positive_int("PAPER_GACHA_SERENDIPITY_COUNT", 3)
+    lookback_days = env_positive_int("PAPER_GACHA_LOOKBACK_DAYS", 365)
+    candidates_per_source = env_positive_int("PAPER_GACHA_CANDIDATES_PER_SOURCE", 35)
+    serendipity_candidates_per_source = env_positive_int("PAPER_GACHA_SERENDIPITY_CANDIDATES_PER_SOURCE", 15)
+    minimum_abstract_characters = env_positive_int("PAPER_GACHA_MINIMUM_ABSTRACT_CHARACTERS", 30)
+    keyword_match_bonus = env_non_negative_float("PAPER_GACHA_KEYWORD_MATCH_BONUS", 0.03)
+    max_post_characters = env_positive_int("PAPER_GACHA_MAX_POST_CHARACTERS", 280)
+    history_limit = env_positive_int("PAPER_GACHA_HISTORY_LIMIT", 5000)
+    diverse_topics = env_diverse_topics()
     posted = load_history()
     print("Collecting papers from public APIs…")
-    expert = unique(fetch(" ".join(EXPERTISE)), posted)
-    related = unique(fetch(" ".join(RELATED)), posted)
-    diverse = {field: unique(fetch(query, 15), posted) for field, query in DIVERSE.items()}
+    expert = unique(fetch(" ".join(expertise), candidates_per_source, lookback_days), posted, minimum_abstract_characters)
+    related_papers = unique(fetch(" ".join(related), candidates_per_source, lookback_days), posted, minimum_abstract_characters)
+    diverse = {field: unique(fetch(query, serendipity_candidates_per_source, lookback_days), posted, minimum_abstract_characters) for field, query in diverse_topics.items()}
     model = SentenceTransformer(MODEL_NAME)
     selections = {
-        "Core": ranked(expert, EXPERTISE, 4, model),
-        "Related": ranked(related, RELATED, 3, model),
-        "Serendipity": diverse_pick(diverse, 3),
+        "Core": ranked(expert, expertise, core_count, keyword_match_bonus, model),
+        "Related": ranked(related_papers, related, related_count, keyword_match_bonus, model),
+        "Serendipity": diverse_pick(diverse, serendipity_count),
     }
-    if sum(len(papers) for papers in selections.values()) != 10:
-        raise RuntimeError("Only selected fewer than 10 papers; retry later or broaden your query settings.")
+    expected_count = core_count + related_count + serendipity_count
+    if sum(len(papers) for papers in selections.values()) != expected_count:
+        raise RuntimeError(f"Only selected fewer than {expected_count} papers; retry later or broaden your query settings.")
     dry_run = os.getenv("PAPER_GACHA_DRY_RUN", "false").lower() == "true"
     if dry_run:
         for category, papers in selections.items():
-            for i, page in enumerate(category_pages(category, papers)):
+            for i, page in enumerate(category_pages(category, papers, max_post_characters)):
                 print("\n" + category_text(category, page, continuation=i > 0))
         return
     handle, password = os.getenv("BLUESKY_HANDLE"), os.getenv("BLUESKY_APP_PASSWORD")
@@ -247,7 +295,7 @@ def main() -> None:
     posted_this_run: set[str] = set()
     for category, papers in selections.items():
         root_ref = parent_ref = None
-        for i, page in enumerate(category_pages(category, papers)):
+        for i, page in enumerate(category_pages(category, papers, max_post_characters)):
             response = client.send_post(
                 text=category_content(category, page, continuation=i > 0),
                 **({"reply_to": models.AppBskyFeedPost.ReplyRef(root=root_ref, parent=parent_ref)} if parent_ref else {}),
@@ -255,7 +303,7 @@ def main() -> None:
             parent_ref = models.ComAtprotoRepoStrongRef.Main(uri=response.uri, cid=response.cid)
             root_ref = root_ref or parent_ref
             posted_this_run.update(paper.uid for paper in page)
-            save_history(posted | posted_this_run)
+            save_history(posted | posted_this_run, history_limit)
             print(f"Posted {category} page {i + 1}")
 
 
