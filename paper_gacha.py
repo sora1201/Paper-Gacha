@@ -68,6 +68,17 @@ def env_non_negative_float(name: str, default: float) -> float:
     return number
 
 
+def env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if not value:
+        return default
+    if value.lower() in {"true", "1", "yes"}:
+        return True
+    if value.lower() in {"false", "0", "no"}:
+        return False
+    raise RuntimeError(f"{name} must be true or false, got {value!r}.")
+
+
 DIVERSE_TOPICS = {
     "biology": "biology",
     "physics": "physics",
@@ -354,6 +365,12 @@ def main() -> None:
         for category, papers in selections.items():
             for i, page in enumerate(category_pages(category, papers, max_post_characters)):
                 print("\n" + category_text(category, page, continuation=i > 0))
+        return
+    write_site(selections)
+    post_to_bluesky = env_bool("PAPER_GACHA_POST_TO_BLUESKY", True)
+    if not post_to_bluesky:
+        save_history(posted | {paper.uid for papers in selections.values() for paper in papers}, history_limit)
+        print("Skipped Bluesky posting; GitHub Pages site was updated.")
         return
     handle, password = os.getenv("BLUESKY_HANDLE"), os.getenv("BLUESKY_APP_PASSWORD")
     if not handle or not password: raise RuntimeError("Set BLUESKY_HANDLE and BLUESKY_APP_PASSWORD (or use PAPER_GACHA_DRY_RUN=true).")
