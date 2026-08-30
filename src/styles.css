@@ -57,3 +57,6 @@
 .dispensed-paper:before{top:15px}.is-dispensing .dispensed-paper{animation:paper-drop .8s cubic-bezier(.2,.8,.3,1) both}@keyframes paper-drop{0%{opacity:0;transform:translateY(-20px) scale(.75)}28%{opacity:1}100%{opacity:1;transform:translateY(62px) rotate(3deg) scale(1)}}
 .draw-flash{position:fixed;inset:0;z-index:45;pointer-events:none;background:#fff;animation:draw-flash .8s ease-in-out both}@keyframes draw-flash{0%{opacity:0}38%{opacity:.92}100%{opacity:0}}
 @media(prefers-reduced-motion:reduce){.is-drawing .handle-arm,.is-drawing .gacha-machine,.is-drawing .capsule{animation-duration:2s}.draw-flash{animation-duration:.8s;opacity:0}.is-dispensing .dispensed-paper{animation:none;opacity:1;transform:translateY(62px)}}
+
+/* Keep drawn papers visible below the sticky navigation after auto-scrolling. */
+.results{scroll-margin-top:102px}
