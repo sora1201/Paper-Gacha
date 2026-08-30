@@ -1,5 +1,5 @@
 import { Settings2, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { PaperCard } from "../components/PaperCard";
@@ -31,6 +31,16 @@ export function GachaPage({
   const [loading, setLoading] = useState(false);
   const [dispensing, setDispensing] = useState(false);
   const [error, setError] = useState("");
+  const resultsRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (papers.length === 0) return;
+
+    resultsRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [papers]);
 
   const valid =
     settings.expertCount + settings.relatedCount + settings.otherCount > 0 &&
@@ -145,7 +155,7 @@ export function GachaPage({
       </section>
 
       {papers.length > 0 && (
-        <section className="results">
+        <section className="results" ref={resultsRef}>
           <p className="eyebrow">{t("gacha.results")}</p>
           {categories.map((category) => {
             const list = papers.filter((paper) => paper.category === category);
