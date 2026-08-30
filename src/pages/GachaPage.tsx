@@ -1,4 +1,4 @@
-import { Dices, Settings2, Sparkles } from "lucide-react";
+import { Settings2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -26,6 +26,7 @@ export function GachaPage({
   const { t } = useTranslation();
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(false);
+  const [dispensing, setDispensing] = useState(false);
   const [error, setError] = useState("");
 
   const valid =
@@ -43,47 +44,85 @@ export function GachaPage({
     setLoading(true);
     setError("");
     try {
-      const { candidates } = await fetchCandidates(settings);
+      const [{ candidates }] = await Promise.all([
+        fetchCandidates(settings),
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]);
       const picked = drawPapers(candidates, settings, getDrawnIds());
+      setDispensing(true);
+      await new Promise((resolve) => setTimeout(resolve, 420));
       setPapers(picked);
       saveDraw(picked);
+      await new Promise((resolve) => setTimeout(resolve, 380));
     } catch {
       setError(t("gacha.error"));
     } finally {
+      setDispensing(false);
       setLoading(false);
     }
   }
 
   return (
     <div className="page gacha-page">
-      <section className="hero">
-        <div className="hero-copy">
+      {dispensing && <div className="draw-flash" aria-hidden="true" />}
+      <section className={`hero gacha-hero ${loading ? "is-drawing" : ""} ${dispensing ? "is-dispensing" : ""}`}>
+        <header className="gacha-intro">
           <p className="eyebrow">
             <Sparkles size={15} />
             {t("gacha.eyebrow")}
           </p>
           <h1>{t("gacha.title")}</h1>
+        </header>
+
+        <div className="gacha-side-copy gacha-side-copy-left">
+          <span className="side-number">01</span>
+          <strong>{t("gacha.mixTitle")}</strong>
           <p>{t("gacha.description")}</p>
+        </div>
+
+        <div className="gacha-machine-wrap">
+          <div className="machine-spark machine-spark-one">✦</div>
+          <div className="machine-spark machine-spark-two">✦</div>
+          <div className="gacha-machine" aria-hidden="true">
+            <div className="machine-dome">
+              <span className="dome-shine" />
+              <div className="capsule capsule-one"><i /></div>
+              <div className="capsule capsule-two"><i /></div>
+              <div className="capsule capsule-three"><i /></div>
+              <div className="capsule capsule-four"><i /></div>
+              <div className="capsule capsule-five"><i /></div>
+            </div>
+            <div className="machine-rim" />
+            <div className="machine-body">
+              <div className="machine-badge"><img src="/paper-gacha-app-icon.png" alt="" /></div>
+              <div className="paper-window"><span /> <span /> <span /></div>
+              <div className="machine-chute"><span>{t("gacha.paperSlot")}</span><i className="dispensed-paper" /></div>
+            </div>
+            <div className="machine-foot" />
+          </div>
 
           <button
-            className="draw-button"
+            className="gacha-handle"
             onClick={draw}
             disabled={!valid || loading}
             aria-describedby={!valid ? "gacha-setup-help" : undefined}
+            aria-label={loading ? t("gacha.drawing") : t("gacha.turnHandle")}
           >
-            {loading ? (
-              <>
-                <span className="spinner" />
-                {t("gacha.drawing")}
-              </>
-            ) : (
-              <>
-                <Dices size={22} />
-                {t("gacha.draw")}
-              </>
-            )}
+            <span className="handle-plate"><span className="handle-arm"><i /></span></span>
           </button>
+          <div className="handle-caption" aria-live="polite">
+            <i aria-hidden="true">↳</i>
+            <span>{loading ? t("gacha.drawing") : t("gacha.handleHint")}</span>
+          </div>
+        </div>
 
+        <div className="gacha-side-copy gacha-side-copy-right">
+          <span className="side-number">02</span>
+          <strong>{t("gacha.turnTitle")}</strong>
+          <p>{t("gacha.turnDescription")}</p>
+        </div>
+
+        <div className="gacha-feedback">
           {!valid && (
             <div className="setup-callout" id="gacha-setup-help">
               <strong>{t("gacha.invalidTitle")}</strong>
@@ -99,12 +138,6 @@ export function GachaPage({
               {error}
             </p>
           )}
-        </div>
-
-        <div className={`hero-art ${loading ? "drawing" : ""}`} aria-hidden="true">
-          <span className="art-glow" />
-          <img src="/paper-gacha-app-icon.png" alt="" />
-          <span className="art-note">OPEN A NEW IDEA</span>
         </div>
       </section>
 
