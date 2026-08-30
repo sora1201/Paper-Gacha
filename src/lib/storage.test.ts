@@ -1,5 +1,5 @@
 import {beforeEach,describe,expect,it,vi} from "vitest";
-import {BackupError,createBackup,defaults,keys,restoreBackup} from "./storage";
+import {BackupError,createBackup,defaults,getHistory,keys,restoreBackup,saveDraw} from "./storage";
 
 class MemoryStorage {
   values=new Map<string,string>();
@@ -20,4 +20,12 @@ describe("backup storage",()=>{
   it("rejects missing required fields",()=>{const backup=validBackup() as unknown as {data:Record<string,unknown>};delete backup.data.history;expect(()=>restoreBackup(backup)).toThrow(BackupError);expect(storage.values.size).toBe(0)});
   it("reports unknown versions at the versioned migration boundary",()=>{expect(()=>restoreBackup({...validBackup(),version:2})).toThrowError(expect.objectContaining({code:"unsupported-version"}));expect(storage.values.size).toBe(0)});
   it("does not partially write any invalid nested value",()=>{storage.setItem(keys.settings,"original");const backup=validBackup() as unknown as {data:{history:Array<{drawnAt:string}>}};backup.data.history[0].drawnAt="not-a-date";expect(()=>restoreBackup(backup)).toThrow(BackupError);expect(storage.getItem(keys.settings)).toBe("original");expect(storage.getItem(keys.history)).toBeNull()});
+});
+
+describe("draw storage",()=>{
+  it("returns the same new entry that is immediately available in history",()=>{
+    const entry=saveDraw([paper]);
+    expect(entry.papers).toEqual([paper]);
+    expect(getHistory()[0]).toEqual(entry);
+  });
 });

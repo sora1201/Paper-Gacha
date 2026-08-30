@@ -6,25 +6,28 @@ import { PaperCard } from "../components/PaperCard";
 import { fetchCandidates } from "../lib/api";
 import { drawPapers } from "../lib/draw";
 import { getDrawnIds, saveDraw } from "../lib/storage";
-import type { GachaSettings, Paper, PaperCategory } from "../types";
+import type { GachaSettings, HistoryEntry, Paper, PaperCategory } from "../types";
 
 const categories: PaperCategory[] = ["expert", "related", "other"];
 
 type GachaPageProps = {
   settings: GachaSettings;
+  papers: Paper[];
   favorites: Paper[];
+  onDraw: (entry: HistoryEntry) => void;
   onFavorite: (paper: Paper) => void;
   onToast: (message: string) => void;
 };
 
 export function GachaPage({
   settings,
+  papers,
   favorites,
+  onDraw,
   onFavorite,
   onToast,
 }: GachaPageProps) {
   const { t } = useTranslation();
-  const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(false);
   const [dispensing, setDispensing] = useState(false);
   const [error, setError] = useState("");
@@ -61,8 +64,8 @@ export function GachaPage({
       const picked = drawPapers(candidates, settings, getDrawnIds());
       setDispensing(true);
       await new Promise((resolve) => setTimeout(resolve, 420));
-      setPapers(picked);
-      saveDraw(picked);
+      const entry = saveDraw(picked);
+      onDraw(entry);
       await new Promise((resolve) => setTimeout(resolve, 380));
     } catch {
       setError(t("gacha.error"));
