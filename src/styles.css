@@ -26,3 +26,34 @@
 .handle-arm{width:20px;height:59px;left:26px;top:2px;transform-origin:50% 35px}
 .handle-arm i{width:30px;height:30px;left:-5px;bottom:-2px}
 .handle-caption{top:520px}
+
+/* A deeper, glossy dome matches the app icon's dimensional neon finish. */
+.machine-dome{background:radial-gradient(circle at 68% 27%,rgba(111,72,255,.72),transparent 28%),radial-gradient(circle at 26% 14%,rgba(94,226,255,.45),transparent 25%),linear-gradient(145deg,rgba(33,39,203,.82),rgba(7,5,73,.96));border-color:#827cff;box-shadow:inset 0 0 0 3px rgba(205,231,255,.8),inset -30px -26px 48px rgba(3,1,55,.75),inset 22px 14px 35px rgba(123,174,255,.35),0 0 0 3px rgba(239,111,255,.2),0 0 28px rgba(99,55,255,.35)}
+.machine-dome:after{content:"";position:absolute;inset:8px;border-radius:135px 135px 38px 38px;background:linear-gradient(118deg,rgba(255,255,255,.28),transparent 27%,transparent 68%,rgba(239,72,255,.18));pointer-events:none}
+.dome-shine{left:36px;top:20px;width:43px;height:132px;background:linear-gradient(105deg,rgba(255,255,255,.9),rgba(135,230,255,.32) 48%,transparent);filter:blur(.5px);opacity:.8}
+.capsule{border-color:rgba(255,255,255,.88);border-width:4px;box-shadow:inset -10px -9px 14px rgba(45,2,77,.38),0 7px 13px rgba(2,0,48,.45),0 0 8px rgba(244,107,255,.28)}
+.capsule:after{content:"";position:absolute;z-index:2;left:13px;top:7px;width:23px;height:10px;border-radius:50%;background:rgba(255,255,255,.65);transform:rotate(-18deg)}
+
+/* Give the central handle its own clear control area. */
+.machine-badge{top:42px;left:22px;width:58px;height:58px;border-radius:18px}
+.machine-badge img{border-radius:14px}
+.paper-window{top:43px;right:22px;width:62px;height:52px;padding:11px 9px}
+.gacha-handle{top:306px;width:82px;height:82px}
+.handle-arm{height:55px;left:23px;transform-origin:50% 33px}
+.handle-caption{top:512px;display:flex;align-items:center;gap:7px;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none;color:var(--muted);letter-spacing:.02em}
+.handle-caption i{color:#6f62c9;font:700 18px "Newsreader",serif;transform:rotate(-12deg)}
+.handle-caption span{font-size:11px;font-weight:500;color:var(--muted)}
+
+/* One continuous, film-like two-second draw sequence. */
+.is-drawing .handle-arm{animation:handle-sequence 2s cubic-bezier(.45,.02,.25,1) 1 both}
+.is-drawing .gacha-machine{animation:machine-sequence 2s ease-in-out 1 both}
+.is-drawing .capsule{animation:capsule-sequence 2s ease-in-out 1 both}
+.is-drawing .capsule:nth-child(even){animation-delay:0}
+@keyframes handle-sequence{0%{transform:rotate(0)}12%{transform:rotate(-18deg)}72%{transform:rotate(720deg)}86%{transform:rotate(704deg)}100%{transform:rotate(720deg)}}
+@keyframes machine-sequence{0%,100%{transform:translateX(0) rotate(0)}18%,32%,46%,60%{transform:translateX(-3px) rotate(-.7deg)}25%,39%,53%,67%{transform:translateX(3px) rotate(.7deg)}82%{transform:translateY(-2px)}}
+@keyframes capsule-sequence{0%,100%{translate:0 0;rotate:0}20%{translate:5px -8px;rotate:8deg}38%{translate:-4px -2px;rotate:-5deg}56%{translate:3px -11px;rotate:7deg}76%{translate:-2px -4px;rotate:-3deg}}
+.dispensed-paper{position:absolute;z-index:2;left:32px;top:25px;width:68px;height:78px;border-radius:5px;background:linear-gradient(145deg,#fff,#e7e3ff);border:3px solid #a89cff;box-shadow:0 8px 18px rgba(10,3,60,.25);opacity:0}
+.dispensed-paper:before,.dispensed-paper:after{content:"";position:absolute;left:12px;right:12px;height:3px;background:#a9a2c5;box-shadow:0 9px #a9a2c5,0 18px #a9a2c5}
+.dispensed-paper:before{top:15px}.is-dispensing .dispensed-paper{animation:paper-drop .8s cubic-bezier(.2,.8,.3,1) both}@keyframes paper-drop{0%{opacity:0;transform:translateY(-20px) scale(.75)}28%{opacity:1}100%{opacity:1;transform:translateY(62px) rotate(3deg) scale(1)}}
+.draw-flash{position:fixed;inset:0;z-index:45;pointer-events:none;background:#fff;animation:draw-flash .8s ease-in-out both}@keyframes draw-flash{0%{opacity:0}38%{opacity:.92}100%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.is-drawing .handle-arm,.is-drawing .gacha-machine,.is-drawing .capsule{animation-duration:2s}.draw-flash{animation-duration:.8s;opacity:0}.is-dispensing .dispensed-paper{animation:none;opacity:1;transform:translateY(62px)}}

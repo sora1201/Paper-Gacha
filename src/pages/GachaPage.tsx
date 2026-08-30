@@ -26,6 +26,7 @@ export function GachaPage({
   const { t } = useTranslation();
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(false);
+  const [dispensing, setDispensing] = useState(false);
   const [error, setError] = useState("");
 
   const valid =
@@ -43,20 +44,28 @@ export function GachaPage({
     setLoading(true);
     setError("");
     try {
-      const { candidates } = await fetchCandidates(settings);
+      const [{ candidates }] = await Promise.all([
+        fetchCandidates(settings),
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]);
       const picked = drawPapers(candidates, settings, getDrawnIds());
+      setDispensing(true);
+      await new Promise((resolve) => setTimeout(resolve, 420));
       setPapers(picked);
       saveDraw(picked);
+      await new Promise((resolve) => setTimeout(resolve, 380));
     } catch {
       setError(t("gacha.error"));
     } finally {
+      setDispensing(false);
       setLoading(false);
     }
   }
 
   return (
     <div className="page gacha-page">
-      <section className={`hero gacha-hero ${loading ? "is-drawing" : ""}`}>
+      {dispensing && <div className="draw-flash" aria-hidden="true" />}
+      <section className={`hero gacha-hero ${loading ? "is-drawing" : ""} ${dispensing ? "is-dispensing" : ""}`}>
         <header className="gacha-intro">
           <p className="eyebrow">
             <Sparkles size={15} />
@@ -87,7 +96,7 @@ export function GachaPage({
             <div className="machine-body">
               <div className="machine-badge"><img src="/paper-gacha-app-icon.png" alt="" /></div>
               <div className="paper-window"><span /> <span /> <span /></div>
-              <div className="machine-chute"><span>{t("gacha.paperSlot")}</span></div>
+              <div className="machine-chute"><span>{t("gacha.paperSlot")}</span><i className="dispensed-paper" /></div>
             </div>
             <div className="machine-foot" />
           </div>
@@ -102,8 +111,8 @@ export function GachaPage({
             <span className="handle-plate"><span className="handle-arm"><i /></span></span>
           </button>
           <div className="handle-caption" aria-live="polite">
-            <span>{loading ? t("gacha.drawing") : t("gacha.turnHandle")}</span>
-            <small>{t("gacha.handleHint")}</small>
+            <i aria-hidden="true">↳</i>
+            <span>{loading ? t("gacha.drawing") : t("gacha.handleHint")}</span>
           </div>
         </div>
 
