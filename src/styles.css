@@ -62,13 +62,14 @@
 .history-groups{border-top:1px solid var(--line)}
 .history-day{display:grid;grid-template-columns:minmax(170px,240px) 1fr;gap:32px;padding:38px 0;border-bottom:1px solid var(--line)}
 .history-day>h2{font-family:"Newsreader",serif;font-size:28px;line-height:1.15;margin:0;position:sticky;top:110px;align-self:start}
+.history-day-draws{min-width:0}
 .history-draw{min-width:0;margin-bottom:32px}.history-draw:last-child{margin-bottom:0}
 .history-time{color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:0 0 10px}
 .reference-list{margin:0;padding:0;list-style:none;counter-reset:reference;border-top:1px solid var(--line)}
-.reference-list li{counter-increment:reference;display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:12px;align-items:start;padding:17px 4px;border-bottom:1px solid var(--line)}
+.reference-list li{counter-increment:reference;display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;align-items:start;padding:17px 4px;border-bottom:1px solid var(--line)}
 .reference-list li:before{content:"[" counter(reference) "]";color:var(--muted);font-family:"Newsreader",serif;font-size:15px;padding-top:4px}
 .reference-content p{font-family:"Newsreader",serif;font-size:17px;line-height:1.55;margin:7px 0 0}
 .reference-category{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green)}
 .reference-category.related{color:#a56520}.reference-category.other{color:#80567b}
-.reference-actions{display:flex;align-items:center;gap:3px}.reference-actions a{display:flex;color:var(--ink);padding:6px}
-@media(max-width:800px){.history-day{display:block;padding:28px 0}.history-day>h2{position:static;font-size:25px;margin-bottom:22px}.reference-list li{grid-template-columns:28px minmax(0,1fr)}.reference-actions{grid-column:2;justify-content:flex-end}.reference-content p{font-size:16px}}
+.reference-actions{grid-column:2;display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:2px}.reference-actions a,.reference-actions button{display:flex;align-items:center;gap:5px;border:0;background:transparent;color:var(--muted);padding:6px 8px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none}.reference-actions a:hover,.reference-actions button:hover{color:var(--green);background:#e7edd8}.reference-actions button.active{color:#b74e54}
+@media(max-width:800px){.history-day{display:block;padding:28px 0}.history-day>h2{position:static;font-size:25px;margin-bottom:22px}.reference-list li{grid-template-columns:28px minmax(0,1fr)}.reference-actions{grid-column:2;justify-content:flex-start;flex-wrap:wrap}.reference-content p{font-size:16px}}
