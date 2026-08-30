@@ -57,3 +57,18 @@
 .dispensed-paper:before{top:15px}.is-dispensing .dispensed-paper{animation:paper-drop .8s cubic-bezier(.2,.8,.3,1) both}@keyframes paper-drop{0%{opacity:0;transform:translateY(-20px) scale(.75)}28%{opacity:1}100%{opacity:1;transform:translateY(62px) rotate(3deg) scale(1)}}
 .draw-flash{position:fixed;inset:0;z-index:45;pointer-events:none;background:#fff;animation:draw-flash .8s ease-in-out both}@keyframes draw-flash{0%{opacity:0}38%{opacity:.92}100%{opacity:0}}
 @media(prefers-reduced-motion:reduce){.is-drawing .handle-arm,.is-drawing .gacha-machine,.is-drawing .capsule{animation-duration:2s}.draw-flash{animation-duration:.8s;opacity:0}.is-dispensing .dispensed-paper{animation:none;opacity:1;transform:translateY(62px)}}
+
+/* Compact, date-grouped bibliography used by the draw archive. */
+.history-groups{border-top:1px solid var(--line)}
+.history-day{display:grid;grid-template-columns:minmax(170px,240px) 1fr;gap:32px;padding:38px 0;border-bottom:1px solid var(--line)}
+.history-day>h2{font-family:"Newsreader",serif;font-size:28px;line-height:1.15;margin:0;position:sticky;top:110px;align-self:start}
+.history-draw{min-width:0;margin-bottom:32px}.history-draw:last-child{margin-bottom:0}
+.history-time{color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:0 0 10px}
+.reference-list{margin:0;padding:0;list-style:none;counter-reset:reference;border-top:1px solid var(--line)}
+.reference-list li{counter-increment:reference;display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:12px;align-items:start;padding:17px 4px;border-bottom:1px solid var(--line)}
+.reference-list li:before{content:"[" counter(reference) "]";color:var(--muted);font-family:"Newsreader",serif;font-size:15px;padding-top:4px}
+.reference-content p{font-family:"Newsreader",serif;font-size:17px;line-height:1.55;margin:7px 0 0}
+.reference-category{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green)}
+.reference-category.related{color:#a56520}.reference-category.other{color:#80567b}
+.reference-actions{display:flex;align-items:center;gap:3px}.reference-actions a{display:flex;color:var(--ink);padding:6px}
+@media(max-width:800px){.history-day{display:block;padding:28px 0}.history-day>h2{position:static;font-size:25px;margin-bottom:22px}.reference-list li{grid-template-columns:28px minmax(0,1fr)}.reference-actions{grid-column:2;justify-content:flex-end}.reference-content p{font-size:16px}}
