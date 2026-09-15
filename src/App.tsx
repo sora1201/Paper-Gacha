@@ -10,6 +10,7 @@ import {
   getHistory,
   getSettings,
   deleteHistoryEntry,
+  deleteHistoryPaper,
   initialLanguage,
   saveFavorites,
   saveSettings,
@@ -52,6 +53,11 @@ export default function App() {
     setHistory(next);
     setLatestPapers(next[0]?.papers ?? []);
   }
+  function deletePaper(entryId: string, paperId: string) {
+    const next = deleteHistoryPaper(entryId, paperId);
+    setHistory(next);
+    setLatestPapers(next[0]?.papers ?? []);
+  }
   function notify(message: string) {
     setToast(message);
     setTimeout(() => setToast(""), 2500);
@@ -69,7 +75,7 @@ export default function App() {
     <main><Routes>
       <Route path="/" element={<GachaPage settings={settings} papers={latestPapers} favorites={favorites} onDraw={recordDraw} onFavorite={toggleFavorite} onToast={notify}/>}/>
       <Route path="/favorites" element={<FavoritesPage favorites={favorites} onFavorite={toggleFavorite} onToast={notify}/>}/>
-      <Route path="/history" element={<HistoryPage history={history} favorites={favorites} onFavorite={toggleFavorite} onDelete={deleteDraw} onToast={notify}/>}/>
+      <Route path="/history" element={<HistoryPage history={history} favorites={favorites} onFavorite={toggleFavorite} onDelete={deleteDraw} onDeletePaper={deletePaper} onToast={notify}/>}/>
       <Route path="/settings" element={<SettingsPage settings={settings} onSettings={updateSettings} onRestore={restored}/>}/>
     </Routes></main>
     <nav className="bottom-nav">{nav.map(({to,key,icon:Icon})=><NavLink end={to==="/"} to={to} key={key}><Icon size={21}/><span>{t(`nav.${key}`)}</span></NavLink>)}</nav>

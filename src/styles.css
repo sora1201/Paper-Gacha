@@ -76,3 +76,4 @@
 /* Keep drawn papers visible below the sticky navigation after auto-scrolling. */
 .results{scroll-margin-top:102px}
 .history-draw-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:10px}.history-draw-heading .history-time{margin:0}.history-delete{display:flex;align-items:center;gap:5px;border:0;background:transparent;color:var(--muted);padding:6px 8px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer}.history-delete:hover{color:#a33f3f;background:#f8e1dc}
+.reference-actions button.reference-delete:hover{color:#a33f3f;background:#f8e1dc}
