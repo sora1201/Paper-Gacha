@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
+import { authSchema } from "./auth-schema";
 
 export type AuthEnv = {
   DB: D1Database;
@@ -34,7 +35,10 @@ export function createAuth(env: AuthEnv, requestUrl: string) {
   const emailVerificationEnabled = env.ENABLE_EMAIL_VERIFICATION === "true" && Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
   const passwordResetEnabled = env.ENABLE_PASSWORD_RESET === "true" && Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
   return betterAuth({
-    database: drizzleAdapter(drizzle(env.DB), { provider: "sqlite" }),
+    database: drizzleAdapter(drizzle(env.DB, { schema: authSchema }), {
+      provider: "sqlite",
+      schema: authSchema,
+    }),
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL ?? origin,
     basePath: "/api/auth",

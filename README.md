@@ -175,6 +175,8 @@ npx wrangler d1 migrations apply paper-gacha --remote
 
 The migration creates Better Auth's `user`, `session`, `account`, and `verification` tables plus the per-user sync table. Run the local migration before `npx wrangler dev`.
 
+The matching Drizzle definitions live in `worker/auth-schema.ts` and are passed to both the D1 Drizzle client and Better Auth adapter. This is an application-code fix for schema discovery: existing databases that already applied `0001_auth_and_sync.sql` do **not** need to recreate or reapply that migration.
+
 ### 3. Configure local development
 
 Copy `.env.example` to `.dev.vars`. `.env.example` intentionally contains only non-secret switches and URLs. Add locally generated credentials only to the ignored `.dev.vars` file:
