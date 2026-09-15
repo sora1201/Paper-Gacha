@@ -44,10 +44,10 @@
 .handle-caption i{color:#6f62c9;font:700 18px "Newsreader",serif;transform:rotate(-12deg)}
 .handle-caption span{font-size:11px;font-weight:500;color:var(--muted)}
 
-/* One continuous, film-like two-second draw sequence. */
-.is-drawing .handle-arm{animation:handle-sequence 2s cubic-bezier(.45,.02,.25,1) 1 both}
-.is-drawing .gacha-machine{animation:machine-sequence 2s ease-in-out 1 both}
-.is-drawing .capsule{animation:capsule-sequence 2s ease-in-out 1 both}
+/* Keep the machine moving for the full request, however long the draw takes. */
+.is-drawing .handle-arm{animation:handle-sequence 2s cubic-bezier(.45,.02,.25,1) infinite}
+.is-drawing .gacha-machine{animation:machine-sequence 2s ease-in-out infinite}
+.is-drawing .capsule{animation:capsule-sequence 2s ease-in-out infinite}
 .is-drawing .capsule:nth-child(even){animation-delay:0}
 @keyframes handle-sequence{0%{transform:rotate(0)}12%{transform:rotate(-18deg)}72%{transform:rotate(720deg)}86%{transform:rotate(704deg)}100%{transform:rotate(720deg)}}
 @keyframes machine-sequence{0%,100%{transform:translateX(0) rotate(0)}18%,32%,46%,60%{transform:translateX(-3px) rotate(-.7deg)}25%,39%,53%,67%{transform:translateX(3px) rotate(.7deg)}82%{transform:translateY(-2px)}}
