@@ -1,5 +1,5 @@
 import {beforeEach,describe,expect,it,vi} from "vitest";
-import {BackupError,createBackup,defaults,getHistory,keys,restoreBackup,saveDraw} from "./storage";
+import {BackupError,createBackup,defaults,deleteHistoryEntry,deleteHistoryPaper,getDrawnIds,getHistory,keys,restoreBackup,saveDraw} from "./storage";
 
 class MemoryStorage {
   values=new Map<string,string>();
@@ -10,6 +10,7 @@ class MemoryStorage {
 }
 const storage=new MemoryStorage();
 const paper={id:"W1",title:"Paper",authors:["A"],year:2024,abstract:null,topics:[{id:"T1",name:"Topic"}],doi:null,landingPageUrl:"https://example.test",openAccessUrl:null,citedByCount:2,category:"expert" as const};
+const anotherPaper={...paper,id:"W2",title:"Another paper"};
 function validBackup(){return {format:"paper-gacha-backup",version:1,exportedAt:"2026-08-29T00:00:00.000Z",data:{settings:defaults,preferences:{language:"ja"},drawn:[{paperId:"W1",drawnAt:"2026-08-28T00:00:00.000Z"}],favorites:[paper],history:[{id:"H1",drawnAt:"2026-08-28T00:00:00.000Z",papers:[paper]}]}} as const}
 
 beforeEach(()=>{storage.clear();vi.stubGlobal("localStorage",storage);vi.stubGlobal("navigator",{language:"en-US"})});
@@ -27,5 +28,29 @@ describe("draw storage",()=>{
     const entry=saveDraw([paper]);
     expect(entry.papers).toEqual([paper]);
     expect(getHistory()[0]).toEqual(entry);
+  });
+  it("deletes a history entry and makes its papers eligible for another draw",()=>{
+    const entry=saveDraw([paper]);
+    expect(getDrawnIds()).toContain(paper.id);
+    expect(deleteHistoryEntry(entry.id)).toEqual([]);
+    expect(getHistory()).toEqual([]);
+    expect(getDrawnIds()).not.toContain(paper.id);
+  });
+  it("deletes one paper while keeping the rest of its draw",()=>{
+    const entry=saveDraw([paper,anotherPaper]);
+    const next=deleteHistoryPaper(entry.id,paper.id);
+    expect(next[0].papers).toEqual([anotherPaper]);
+    expect(getDrawnIds()).not.toContain(paper.id);
+    expect(getDrawnIds()).toContain(anotherPaper.id);
+  });
+  it("removes the empty draw after deleting its last paper",()=>{
+    const entry=saveDraw([paper]);
+    expect(deleteHistoryPaper(entry.id,paper.id)).toEqual([]);
+    expect(getHistory()).toEqual([]);
+  });
+  it("leaves storage unchanged when the history entry does not exist",()=>{
+    const entry=saveDraw([paper]);
+    expect(deleteHistoryEntry("missing")).toEqual([entry]);
+    expect(getDrawnIds()).toContain(paper.id);
   });
 });

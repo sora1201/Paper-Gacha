@@ -1,4 +1,4 @@
-import { ArrowUpRight, BookHeart, Heart, History as HistoryIcon, Share2 } from "lucide-react";
+import { ArrowUpRight, BookHeart, Heart, History as HistoryIcon, Share2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PaperCard } from "../components/PaperCard";
 import { deliverShare, ieeeCitation } from "../lib/citation";
@@ -13,7 +13,7 @@ export function FavoritesPage({favorites,onFavorite,onToast}:{favorites:Paper[];
 
 const paperUrl = (paper: Paper) => paper.openAccessUrl || (paper.doi ? `https://doi.org/${paper.doi}` : paper.landingPageUrl);
 
-export function HistoryPage({history,favorites,onFavorite,onToast}:{history:HistoryEntry[];favorites:Paper[];onFavorite:(p:Paper)=>void;onToast:(s:string)=>void}) {
+export function HistoryPage({history,favorites,onFavorite,onDelete,onDeletePaper,onToast}:{history:HistoryEntry[];favorites:Paper[];onFavorite:(p:Paper)=>void;onDelete:(id:string)=>void;onDeletePaper:(entryId:string,paperId:string)=>void;onToast:(s:string)=>void}) {
   const {t,i18n}=useTranslation();
   const dateFormatter = new Intl.DateTimeFormat(i18n.language,{dateStyle:"long"});
   const timeFormatter = new Intl.DateTimeFormat(i18n.language,{timeStyle:"short"});
@@ -33,17 +33,29 @@ export function HistoryPage({history,favorites,onFavorite,onToast}:{history:Hist
       if((error as Error).name!=="AbortError") onToast(t("common.shareFailed"));
     }
   }
+  function deleteDraw(entry:HistoryEntry) {
+    if(window.confirm(t("history.deleteConfirm"))) {
+      onDelete(entry.id);
+      onToast(t("history.deleted"));
+    }
+  }
+  function deletePaper(entryId:string,paper:Paper) {
+    if(window.confirm(t("history.deletePaperConfirm",{title:paper.title}))) {
+      onDeletePaper(entryId,paper.id);
+      onToast(t("history.paperDeleted"));
+    }
+  }
 
   return <div className="page library-page history-page">
     <header className="page-heading"><p className="eyebrow">ARCHIVE</p><h1>{t("history.title")}</h1><p>{t("history.description")}</p></header>
     {groups.length ? <div className="history-groups">{groups.map(group => <section className="history-day" key={group.date}>
       <h2>{group.date}</h2>
       <div className="history-day-draws">{group.entries.map(entry => <div className="history-draw" key={entry.id}>
-        <p className="history-time">{t("history.drawnAt",{time:timeFormatter.format(new Date(entry.drawnAt))})}</p>
+        <div className="history-draw-heading"><p className="history-time">{t("history.drawnAt",{time:timeFormatter.format(new Date(entry.drawnAt))})}</p><button className="history-delete" onClick={()=>deleteDraw(entry)} aria-label={t("history.delete")}><Trash2 size={15}/><span>{t("history.delete")}</span></button></div>
         <ol className="reference-list">{entry.papers.map(paper => {
           const url=paperUrl(paper);
           const favorite=favorites.some(item=>item.id===paper.id);
-          return <li key={paper.id}><div className="reference-content"><span className={`reference-category ${paper.category}`}>{t(`common.${paper.category}`)}</span><p>{ieeeCitation(paper)}</p></div><div className="reference-actions">{url && <a href={url} target="_blank" rel="noreferrer"><ArrowUpRight size={16}/><span>{t("common.open")}</span></a>}<button onClick={()=>void sharePaper(paper)}><Share2 size={16}/><span>{t("common.share")}</span></button><button className={favorite?"active":""} onClick={()=>onFavorite(paper)}><Heart size={16} fill={favorite?"currentColor":"none"}/><span>{t(favorite?"common.removeFavorite":"common.favorite")}</span></button></div></li>;
+          return <li key={paper.id}><div className="reference-content"><span className={`reference-category ${paper.category}`}>{t(`common.${paper.category}`)}</span><p>{ieeeCitation(paper)}</p></div><div className="reference-actions">{url && <a href={url} target="_blank" rel="noreferrer"><ArrowUpRight size={16}/><span>{t("common.open")}</span></a>}<button onClick={()=>void sharePaper(paper)}><Share2 size={16}/><span>{t("common.share")}</span></button><button className={favorite?"active":""} onClick={()=>onFavorite(paper)}><Heart size={16} fill={favorite?"currentColor":"none"}/><span>{t(favorite?"common.removeFavorite":"common.favorite")}</span></button><button className="reference-delete" onClick={()=>deletePaper(entry.id,paper)}><Trash2 size={16}/><span>{t("history.deletePaper")}</span></button></div></li>;
         })}</ol>
       </div>)}</div>
     </section>)}</div> : <div className="empty"><HistoryIcon/><p>{t("history.empty")}</p></div>}
