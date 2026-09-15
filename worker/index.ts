@@ -1,7 +1,5 @@
 import { mapCrossrefWork, mapWork } from "./mapper";
 import type { GachaSettings, PaperCategory, SelectedTopic } from "../src/types";
-import { createAuth, handleAuth, type AuthEnv } from "./auth";
-import { handleSync } from "./sync-store";
 
 const openAlexBase = "https://api.openalex.org";
 const crossrefBase = "https://api.crossref.org";
@@ -9,7 +7,7 @@ const requestHeaders = {
   "user-agent": "Paper Gacha/0.1 (mailto:hello@paper-gacha.app)",
 };
 
-type Env = AuthEnv & {
+type Env = {
   ASSETS: { fetch(request: Request): Promise<Response> };
   OPENALEX_API_KEY?: string;
 };
@@ -64,21 +62,10 @@ const json = (body: unknown, status = 200) => Response.json(body, {
   headers: { "cache-control": "public, max-age=300" },
 });
 
-async function sessionUser(request: Request, env: Env) {
-  const session = await createAuth(env, request.url).api.getSession({ headers: request.headers });
-  return session?.user ?? null;
-}
-
 export default {
   async fetch(request: Request, env: Env) {
     const url = new URL(request.url);
     try {
-      if (url.pathname.startsWith("/api/auth/")) return handleAuth(request, env);
-      if (url.pathname === "/api/sync") {
-        const user = await sessionUser(request, env);
-        if (!user) return Response.json({ error: "Unauthorized" }, { status: 401, headers: { "cache-control": "private, no-store" } });
-        return handleSync(request, env.DB, user.id);
-      }
       if (url.pathname === "/api/gacha" && request.method === "POST") {
         const settings = await request.json() as GachaSettings;
         const candidates: any = { expert: {}, related: {}, other: {} };

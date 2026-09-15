@@ -1,6 +1,4 @@
 node_modules
-.dev.vars
-.env.local
 dist
 .wrangler
 *.tsbuildinfo
@@ -11,5 +9,3 @@ worker/**/*.d.ts
 vite.config.js
 vite.config.d.ts
 .DS_Store
-
-!worker/cloudflare.d.ts
