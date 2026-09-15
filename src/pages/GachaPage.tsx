@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { PaperCard } from "../components/PaperCard";
 import { fetchCandidates } from "../lib/api";
 import { drawPapers } from "../lib/draw";
+import { withAutomaticOtherTopic } from "../lib/automaticOther";
 import { getDrawnIds, saveDraw } from "../lib/storage";
 import type { GachaSettings, HistoryEntry, Paper, PaperCategory } from "../types";
 
@@ -32,6 +33,7 @@ export function GachaPage({
   const [dispensing, setDispensing] = useState(false);
   const [error, setError] = useState("");
   const resultsRef = useRef<HTMLElement>(null);
+  const effectiveSettings = withAutomaticOtherTopic(settings);
 
   useEffect(() => {
     if (papers.length === 0) return;
@@ -43,10 +45,10 @@ export function GachaPage({
   }, [papers]);
 
   const valid =
-    settings.expertCount + settings.relatedCount + settings.otherCount > 0 &&
+    effectiveSettings.expertCount + effectiveSettings.relatedCount + effectiveSettings.otherCount > 0 &&
     categories.every((category) => {
-      const count = settings[`${category}Count` as keyof GachaSettings] as number;
-      const topics = settings[
+      const count = effectiveSettings[`${category}Count` as keyof GachaSettings] as number;
+      const topics = effectiveSettings[
         `${category}Topics` as keyof GachaSettings
       ] as unknown[];
       return count === 0 || topics.length > 0;
@@ -58,10 +60,10 @@ export function GachaPage({
     setError("");
     try {
       const [{ candidates }] = await Promise.all([
-        fetchCandidates(settings),
+        fetchCandidates(effectiveSettings),
         new Promise((resolve) => setTimeout(resolve, 1500)),
       ]);
-      const picked = drawPapers(candidates, settings, getDrawnIds());
+      const picked = drawPapers(candidates, effectiveSettings, getDrawnIds());
       setDispensing(true);
       await new Promise((resolve) => setTimeout(resolve, 420));
       const entry = saveDraw(picked);

@@ -75,3 +75,16 @@
 @media(max-width:800px){.history-day{display:block;padding:28px 0}.history-day>h2{position:static;font-size:25px;margin-bottom:22px}.reference-list li{grid-template-columns:28px minmax(0,1fr)}.reference-actions{grid-column:2;justify-content:flex-start;flex-wrap:wrap}.reference-content p{font-size:16px}}
 /* Keep drawn papers visible below the sticky navigation after auto-scrolling. */
 .results{scroll-margin-top:102px}
+
+.automatic-topic {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 3rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px dashed currentColor;
+  border-radius: 0.75rem;
+}
+.automatic-topic span { font-weight: 700; }
+.automatic-topic small { opacity: 0.7; text-align: right; }
