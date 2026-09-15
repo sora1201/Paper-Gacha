@@ -1,12 +1,13 @@
-import { Settings2, Sparkles } from "lucide-react";
+import { BookOpen, ExternalLink, Settings2, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { PaperCard } from "../components/PaperCard";
-import { fetchCandidates } from "../lib/api";
+import { fetchCandidates, fetchRelatedBooks } from "../lib/api";
+import { amazonSearchUrl, relatedBookQueries, relatedBookSlots } from "../lib/amazon";
 import { drawPapers } from "../lib/draw";
 import { getDrawnIds, saveDraw } from "../lib/storage";
-import type { GachaSettings, HistoryEntry, Paper, PaperCategory } from "../types";
+import type { GachaSettings, HistoryEntry, Paper, PaperCategory, RelatedBook } from "../types";
 
 const categories: PaperCategory[] = ["expert", "related", "other"];
 
@@ -27,12 +28,27 @@ export function GachaPage({
   onFavorite,
   onToast,
 }: GachaPageProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [dispensing, setDispensing] = useState(false);
   const [error, setError] = useState("");
   const resultsRef = useRef<HTMLElement>(null);
   const shouldScrollToResults = useRef(false);
+  const [relatedBooks, setRelatedBooks] = useState<RelatedBook[]>([]);
+  const bookQueries = relatedBookQueries(papers, settings, i18n.resolvedLanguage ?? i18n.language);
+  const bookSlots = relatedBookSlots(relatedBooks, bookQueries);
+
+  useEffect(() => {
+    if (!papers.length) { setRelatedBooks([]); return; }
+    setRelatedBooks([]);
+    const controller = new AbortController();
+    void fetchRelatedBooks(bookQueries).then(({ books }) => {
+      if (!controller.signal.aborted) setRelatedBooks(books);
+    }).catch(() => {
+      if (!controller.signal.aborted) setRelatedBooks([]);
+    });
+    return () => controller.abort();
+  }, [papers, settings, i18n.resolvedLanguage, i18n.language]);
 
   useEffect(() => {
     if (loading || !shouldScrollToResults.current || papers.length === 0) return;
@@ -197,6 +213,35 @@ export function GachaPage({
             );
           })}
         </section>
+      )}
+
+      {papers.length > 0 && (
+        <aside className="related-books" aria-labelledby="related-books-title">
+          <div className="related-books-heading">
+            <BookOpen size={20} aria-hidden="true" />
+            <div>
+              <p className="eyebrow">{t("gacha.relatedBooksLabel")}</p>
+              <h2 id="related-books-title">{t("gacha.relatedBooksTitle")}</h2>
+            </div>
+          </div>
+          <div className="related-book-links">
+            {bookSlots.map((slot, index) => slot.type === "book" ? (
+              <a className="related-book-product" key={`book-${slot.book.id}`} href={amazonSearchUrl(slot.book.isbn,i18n.resolvedLanguage ?? i18n.language,import.meta.env.VITE_AMAZON_ASSOCIATE_TAG)} target="_blank" rel="sponsored noopener noreferrer">
+                <img src={slot.book.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" />
+                <span><strong>{slot.book.title}</strong>{slot.book.authors.length > 0 && <small>{slot.book.authors.join(", ")}</small>}</span>
+                <ExternalLink size={15} aria-hidden="true" />
+              </a>
+            ) : (
+              <a className="related-book-search" key={`search-${index}-${slot.query}`} href={amazonSearchUrl(slot.query,i18n.resolvedLanguage ?? i18n.language,import.meta.env.VITE_AMAZON_ASSOCIATE_TAG)} target="_blank" rel="sponsored noopener noreferrer">
+                <BookOpen size={24} aria-hidden="true" />
+                <span><strong>{t("gacha.searchRelatedBooks",{query:slot.query})}</strong><small>{t("gacha.amazonSearch")}</small></span>
+                <ExternalLink size={15} aria-hidden="true" />
+              </a>
+            ))}
+          </div>
+          <p className="affiliate-disclosure">{t("gacha.affiliateDisclosure")}</p>
+          <p className="affiliate-neutrality">{t("gacha.affiliateNeutrality")}</p>
+        </aside>
       )}
     </div>
   );
