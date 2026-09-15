@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { FavoritesPage, HistoryPage } from "./pages/LibraryPages";
 import { GachaPage } from "./pages/GachaPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { LoginPage } from "./pages/LoginPage";
 import {
   getFavorites,
   getHistory,
@@ -25,6 +26,7 @@ export default function App() {
   const [history, setHistory] = useState(getHistory);
   const [latestPapers, setLatestPapers] = useState<Paper[]>(() => getHistory()[0]?.papers ?? []);
   const [toast, setToast] = useState("");
+  const [useLocalOnly, setUseLocalOnly] = useState(false);
 
   const restored = useCallback(function restored() {
     const restoredHistory = getHistory();
@@ -35,6 +37,7 @@ export default function App() {
     void i18n.changeLanguage(initialLanguage());
   }, [i18n]);
   const account = useAccountSync(restored);
+  if (!account.user && !useLocalOnly) return <LoginPage account={account} onLocal={()=>setUseLocalOnly(true)}/>;
   function updateSettings(value: GachaSettings) {
     setSettings(value);
     saveSettings(value);

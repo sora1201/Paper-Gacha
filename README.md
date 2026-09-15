@@ -154,13 +154,44 @@ Research metadata is provided by [OpenAlex](https://openalex.org/), an open cata
 
 ## Account sync with Supabase
 
-The app remains fully usable without an account. When signed in, browser storage is the offline device cache and is merged with the user's Supabase row. Settings and language use last-write-wins timestamps; favorites, history entries, and read paper IDs merge by stable ID (including deletion tombstones). History remains limited to the newest 100 entries. Changes are retried when the browser comes online and rapid edits are debounced.
+The app shows an account screen on first load. Users can sign in to sync, or choose **Continue without an account** to retain the original local-only workflow. When signed in, browser storage remains the offline cache. Settings and language use last-write-wins timestamps; favorites, history, and read IDs merge by stable ID with deletion tombstones. History is capped at the newest 100 entries, rapid edits are debounced, and failed changes retry after the browser comes online.
 
-### Supabase setup
+### 1. Create the database schema
 
-1. Create a Supabase project and run `supabase/migrations/20260915000000_create_user_sync_data.sql` in the SQL Editor (or with the Supabase CLI). It creates the sync table, enables RLS, and restricts selects/inserts/updates to `auth.uid()`. The database check constraint also rejects a client-supplied ID belonging to another user.
-2. In **Authentication → Providers**, enable Email and Google. For Google, create OAuth credentials in Google Cloud using Supabase's displayed callback URL (`https://<project-ref>.supabase.co/auth/v1/callback`), then enter the client ID and secret in Supabase.
-3. In **Authentication → URL Configuration**, set the production app as **Site URL** and add both production and local URLs (for example `https://paper-gacha.example/settings` and `http://localhost:5173/settings`) to **Redirect URLs**. Password-recovery and Google sign-in return to `/settings`.
-4. Copy `.env.example` to `.env.local` and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. These are Supabase's public browser credentials. Never expose or add `SUPABASE_SERVICE_ROLE_KEY`; Paper Gacha does not require it. Configure the same two `VITE_` variables in the frontend build environment for deployment.
+1. Create a Supabase project, then open **SQL Editor → New query**.
+2. Paste and run [`supabase/migrations/20260915000000_create_user_sync_data.sql`](supabase/migrations/20260915000000_create_user_sync_data.sql). With the CLI, use `supabase link --project-ref <project-ref>` followed by `supabase db push` instead.
+3. In **Database → Tables → user_sync_data**, confirm that RLS is enabled. In **Authentication → Policies**, confirm the three policies for `SELECT`, `INSERT`, and `UPDATE` exist.
+4. Do not add a permissive anonymous policy. The table intentionally requires an authenticated JWT, defaults `user_id` to `auth.uid()`, and rejects a different user ID with both its check constraint and RLS policy.
 
-The existing Cloudflare Worker remains responsible only for OpenAlex/Crossref-facing API requests. Authentication and sync call Supabase directly with the signed-in user's JWT, so the Worker contains no password, session, or Supabase service-role credential.
+You can verify isolation by creating two test users: sign in as user A and create sync data, then sign in as user B in a private window. User B must neither see nor overwrite user A's row.
+
+### 2. Configure email authentication
+
+1. Open **Authentication → Providers → Email** and enable Email/Password.
+2. Decide whether **Confirm email** is required. When enabled, new users must follow the confirmation email before their first password login; customize the confirmation and recovery templates under **Authentication → Email Templates** if needed.
+3. Open **Authentication → URL Configuration**. Set **Site URL** to the deployed app origin (for example `https://paper-gacha.example`) and add the exact settings callbacks to **Redirect URLs**, such as `https://paper-gacha.example/settings` and `http://localhost:5173/settings`.
+4. Configure a production SMTP provider under **Project Settings → Authentication → SMTP** before production use. Supabase's built-in mail service is intended for limited testing and may be rate-limited.
+
+### 3. Configure Google OAuth
+
+1. In Google Cloud Console, create or select a project, configure the OAuth consent screen, and create a **Web application** OAuth 2.0 client.
+2. In Supabase **Authentication → Providers → Google**, copy the callback URL shown by Supabase. It normally has the form `https://<project-ref>.supabase.co/auth/v1/callback`.
+3. Add that Supabase callback—not the Paper Gacha URL—to Google's **Authorized redirect URIs**. Add the deployed Paper Gacha origin to **Authorized JavaScript origins** if required by the Google configuration.
+4. Enter the Google client ID and client secret in the Supabase Google provider and enable it. The Google client secret stays only in Supabase and must never be placed in this repository or a `VITE_` variable.
+5. Keep the Paper Gacha `/settings` URLs from the email setup in Supabase's redirect allow list; Supabase redirects the completed OAuth session there.
+
+### 4. Configure frontend environment variables
+
+Copy `.env.example` to `.env.local` for local development:
+
+```bash
+cp .env.example .env.local
+```
+
+Set `VITE_SUPABASE_URL` from **Project Settings → API → Project URL** and `VITE_SUPABASE_ANON_KEY` to the public anon/publishable browser key from the same page. Restart Vite after changing them. For production, add both variables to the environment that runs `npm run build`; Vite embeds them at build time. Setting them only as runtime Worker secrets is not sufficient for the already-built frontend.
+
+Never use `SUPABASE_SERVICE_ROLE_KEY` in the browser, Cloudflare Worker, `.env.example`, or committed files. Paper Gacha does not require it. The existing Worker remains limited to the research-data APIs; authentication and sync call Supabase directly with the signed-in user's JWT and are protected by RLS.
+
+### 5. Production smoke test
+
+After deployment, test email registration/confirmation, email login, reset-email delivery, Google login, logout, offline edits, and reconciliation between two browsers. Also confirm that the browser network requests use the anon key plus the user's JWT and that an unauthenticated request to `/rest/v1/user_sync_data` cannot read rows.
