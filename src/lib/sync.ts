@@ -8,12 +8,15 @@ export type SyncData = {
   preferences: AppPreferences;
   preferencesUpdatedAt: string;
   favorites: Paper[];
+  favoritesUpdatedAt?: string;
   history: HistoryEntry[];
+  historyUpdatedAt?: string;
   drawn: DrawnPaperRecord[];
+  drawnUpdatedAt?: string;
   updatedAt: string;
 };
 export type SyncStatus = "synced" | "syncing" | "offline" | "failed";
-type SyncMeta = { settingsUpdatedAt: string; preferencesUpdatedAt: string; updatedAt: string };
+type SyncMeta = { settingsUpdatedAt: string; preferencesUpdatedAt: string; favoritesUpdatedAt?: string; historyUpdatedAt?: string; drawnUpdatedAt?: string; updatedAt: string };
 export const syncMetaKey = "paper-gacha:sync-meta";
 export const syncOwnerKey = "paper-gacha:sync-owner";
 const epoch = new Date(0).toISOString();
@@ -25,20 +28,34 @@ function uniqueBy<T>(items: T[], key: (item: T) => string): T[] {
   return [...result.values()];
 }
 
+function mergeCollection<T>(local: T[], remote: T[], localAt: string, remoteAt: string, key: (item: T) => string): T[] {
+  if (Date.parse(localAt) > Date.parse(remoteAt)) return local;
+  if (Date.parse(remoteAt) > Date.parse(localAt)) return remote;
+  return uniqueBy([...local, ...remote], key);
+}
+
 export function mergeSyncData(local: SyncData, remote: SyncData): SyncData {
   const localSettingsWin = Date.parse(local.settingsUpdatedAt) >= Date.parse(remote.settingsUpdatedAt);
   const localPreferencesWin = Date.parse(local.preferencesUpdatedAt) >= Date.parse(remote.preferencesUpdatedAt);
-  const favorites = uniqueBy([...local.favorites, ...remote.favorites], paper => paper.id);
-  const history = uniqueBy([...local.history, ...remote.history], item => item.id)
+  const localFavoritesAt = local.favoritesUpdatedAt ?? local.updatedAt;
+  const remoteFavoritesAt = remote.favoritesUpdatedAt ?? remote.updatedAt;
+  const localHistoryAt = local.historyUpdatedAt ?? local.updatedAt;
+  const remoteHistoryAt = remote.historyUpdatedAt ?? remote.updatedAt;
+  const localDrawnAt = local.drawnUpdatedAt ?? local.updatedAt;
+  const remoteDrawnAt = remote.drawnUpdatedAt ?? remote.updatedAt;
+  const favorites = mergeCollection(local.favorites, remote.favorites, localFavoritesAt, remoteFavoritesAt, paper => paper.id);
+  const history = mergeCollection(local.history, remote.history, localHistoryAt, remoteHistoryAt, item => item.id)
     .sort((a, b) => Date.parse(b.drawnAt) - Date.parse(a.drawnAt)).slice(0, 100);
-  const drawn = uniqueBy([...local.drawn, ...remote.drawn], item => item.paperId);
+  const drawn = mergeCollection(local.drawn, remote.drawn, localDrawnAt, remoteDrawnAt, item => item.paperId);
   return {
     schemaVersion: 1,
     settings: localSettingsWin ? local.settings : remote.settings,
     settingsUpdatedAt: latest(local.settingsUpdatedAt, remote.settingsUpdatedAt),
     preferences: localPreferencesWin ? local.preferences : remote.preferences,
     preferencesUpdatedAt: latest(local.preferencesUpdatedAt, remote.preferencesUpdatedAt),
-    favorites, history, drawn,
+    favorites, favoritesUpdatedAt: latest(localFavoritesAt, remoteFavoritesAt),
+    history, historyUpdatedAt: latest(localHistoryAt, remoteHistoryAt),
+    drawn, drawnUpdatedAt: latest(localDrawnAt, remoteDrawnAt),
     updatedAt: latest(local.updatedAt, remote.updatedAt),
   };
 }
@@ -49,7 +66,9 @@ export function localSyncData(): SyncData {
   const meta = read<SyncMeta>(syncMetaKey, { settingsUpdatedAt: firstLocalTimestamp, preferencesUpdatedAt: firstLocalTimestamp, updatedAt: firstLocalTimestamp });
   return { schemaVersion: 1, settings: read(keys.settings, defaults), settingsUpdatedAt: meta.settingsUpdatedAt,
     preferences: read(keys.preferences, { language: initialLanguage() }), preferencesUpdatedAt: meta.preferencesUpdatedAt,
-    favorites: read(keys.favorites, []), history: read(keys.history, []), drawn: read(keys.drawn, []), updatedAt: meta.updatedAt };
+    favorites: read(keys.favorites, []), favoritesUpdatedAt: meta.favoritesUpdatedAt ?? meta.updatedAt,
+    history: read(keys.history, []), historyUpdatedAt: meta.historyUpdatedAt ?? meta.updatedAt,
+    drawn: read(keys.drawn, []), drawnUpdatedAt: meta.drawnUpdatedAt ?? meta.updatedAt, updatedAt: meta.updatedAt };
 }
 
 /** Prevents one signed-in user's device cache from being uploaded to another account. */
@@ -65,14 +84,18 @@ export function prepareCacheForUser(userId: string) {
 export function storeSyncData(data: SyncData) {
   write(keys.settings, data.settings); write(keys.preferences, data.preferences); write(keys.favorites, data.favorites);
   write(keys.history, data.history.slice(0, 100)); write(keys.drawn, data.drawn);
-  write(syncMetaKey, { settingsUpdatedAt: data.settingsUpdatedAt, preferencesUpdatedAt: data.preferencesUpdatedAt, updatedAt: data.updatedAt });
+  write(syncMetaKey, { settingsUpdatedAt: data.settingsUpdatedAt, preferencesUpdatedAt: data.preferencesUpdatedAt,
+    favoritesUpdatedAt: data.favoritesUpdatedAt ?? data.updatedAt, historyUpdatedAt: data.historyUpdatedAt ?? data.updatedAt,
+    drawnUpdatedAt: data.drawnUpdatedAt ?? data.updatedAt, updatedAt: data.updatedAt });
 }
 
-export function markLocalChange(kind?: "settings" | "preferences") {
+export function markLocalChange(kind: "settings" | "preferences" | "favorites" | "history") {
   const now = new Date().toISOString();
   const current = read<SyncMeta>(syncMetaKey, { settingsUpdatedAt: epoch, preferencesUpdatedAt: epoch, updatedAt: epoch });
   write(syncMetaKey, { ...current, ...(kind === "settings" ? { settingsUpdatedAt: now } : {}),
-    ...(kind === "preferences" ? { preferencesUpdatedAt: now } : {}), updatedAt: now });
+    ...(kind === "preferences" ? { preferencesUpdatedAt: now } : {}),
+    ...(kind === "favorites" ? { favoritesUpdatedAt: now } : {}),
+    ...(kind === "history" ? { historyUpdatedAt: now, drawnUpdatedAt: now } : {}), updatedAt: now });
 }
 
 export async function synchronize(): Promise<SyncData> {
