@@ -246,3 +246,14 @@ Apply the remote migration before the first deployment. In production, verify th
 | `PUT` | `/api/sync` | Store only the authenticated user's merged snapshot. |
 
 The sync endpoints derive the user ID from the Better Auth session cookie and never accept a client-supplied user ID. Unauthenticated requests return `401`.
+
+### Verify OAuth routing after deployment
+
+Cloudflare Static Assets is configured with `run_worker_first: ["/api/*"]`. This is required because SPA fallback would otherwise serve `index.html` with `200 OK` for `/api/auth/callback/google` before `worker/index.ts` or Better Auth can run.
+
+1. Start Google sign-in from `/settings` and complete consent.
+2. In DevTools Network, select `/api/auth/callback/google` and confirm a `302` response whose `Location` is the same-origin `/settings`. Do not copy the authorization code or cookie value into logs.
+3. Confirm the callback response includes a session `Set-Cookie` header with `Path=/`, `HttpOnly`, `Secure`, and `SameSite=Lax` in production.
+4. Confirm the following `GET /api/auth/get-session` returns the signed-in Google user.
+
+For a local check, apply the local migration, run `npx wrangler dev`, and repeat against `http://localhost:8787`. The local cookie intentionally omits `Secure`; the callback must still return `302` to `http://localhost:8787/settings`. This routing fix does not change or require reapplying any D1 migration.
