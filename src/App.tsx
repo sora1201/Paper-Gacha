@@ -49,24 +49,24 @@ export default function App() {
       : [paper, ...favorites];
     setFavorites(next);
     saveFavorites(next);
-    markLocalChange(); scheduleSync();
+    markLocalChange("favorites"); scheduleSync();
   }
   function recordDraw(entry: HistoryEntry) {
     setLatestPapers(entry.papers);
     setHistory((current) => [entry, ...current].slice(0, 100));
-    markLocalChange(); scheduleSync();
+    markLocalChange("history"); scheduleSync();
   }
   function deleteDraw(id: string) {
     const next = deleteHistoryEntry(id);
     setHistory(next);
     setLatestPapers(next[0]?.papers ?? []);
-    markLocalChange(); scheduleSync();
+    markLocalChange("history"); scheduleSync();
   }
   function deletePaper(entryId: string, paperId: string) {
     const next = deleteHistoryPaper(entryId, paperId);
     setHistory(next);
     setLatestPapers(next[0]?.papers ?? []);
-    markLocalChange(); scheduleSync();
+    markLocalChange("history"); scheduleSync();
   }
   function notify(message: string) {
     setToast(message);
