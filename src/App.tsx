@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { BookHeart, Clock3, Dices, Settings } from "lucide-react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -16,6 +16,7 @@ import {
   saveSettings,
 } from "./lib/storage";
 import type { GachaSettings, HistoryEntry, Paper } from "./types";
+import { useAccountSync } from "./lib/useAccountSync";
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -25,14 +26,15 @@ export default function App() {
   const [latestPapers, setLatestPapers] = useState<Paper[]>(() => getHistory()[0]?.papers ?? []);
   const [toast, setToast] = useState("");
 
-  function restored() {
+  const restored = useCallback(function restored() {
     const restoredHistory = getHistory();
     setSettings(getSettings());
     setFavorites(getFavorites());
     setHistory(restoredHistory);
     setLatestPapers(restoredHistory[0]?.papers ?? []);
     void i18n.changeLanguage(initialLanguage());
-  }
+  }, [i18n]);
+  const account = useAccountSync(restored);
   function updateSettings(value: GachaSettings) {
     setSettings(value);
     saveSettings(value);
@@ -76,7 +78,7 @@ export default function App() {
       <Route path="/" element={<GachaPage settings={settings} papers={latestPapers} favorites={favorites} onDraw={recordDraw} onFavorite={toggleFavorite} onToast={notify}/>}/>
       <Route path="/favorites" element={<FavoritesPage favorites={favorites} onFavorite={toggleFavorite} onToast={notify}/>}/>
       <Route path="/history" element={<HistoryPage history={history} favorites={favorites} onFavorite={toggleFavorite} onDelete={deleteDraw} onDeletePaper={deletePaper} onToast={notify}/>}/>
-      <Route path="/settings" element={<SettingsPage settings={settings} onSettings={updateSettings} onRestore={restored}/>}/>
+      <Route path="/settings" element={<SettingsPage settings={settings} onSettings={updateSettings} onRestore={restored} account={account}/>}/>
     </Routes></main>
     <nav className="bottom-nav">{nav.map(({to,key,icon:Icon})=><NavLink end={to==="/"} to={to} key={key}><Icon size={21}/><span>{t(`nav.${key}`)}</span></NavLink>)}</nav>
     {toast&&<div className="toast" role="status">{toast}</div>}

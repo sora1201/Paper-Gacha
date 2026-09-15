@@ -151,3 +151,16 @@ Paper Gacha is available under the [MIT License](LICENSE).
 ## Acknowledgments
 
 Research metadata is provided by [OpenAlex](https://openalex.org/), an open catalog of the global research system. Paper Gacha is an independent project and is not affiliated with OpenAlex.
+
+## Account sync with Supabase
+
+The app remains fully usable without an account. When signed in, browser storage is the offline device cache and is merged with the user's Supabase row. Settings and language use last-write-wins timestamps; favorites, history entries, and read paper IDs merge by stable ID (including deletion tombstones). History remains limited to the newest 100 entries. Changes are retried when the browser comes online and rapid edits are debounced.
+
+### Supabase setup
+
+1. Create a Supabase project and run `supabase/migrations/20260915000000_create_user_sync_data.sql` in the SQL Editor (or with the Supabase CLI). It creates the sync table, enables RLS, and restricts selects/inserts/updates to `auth.uid()`. The database check constraint also rejects a client-supplied ID belonging to another user.
+2. In **Authentication → Providers**, enable Email and Google. For Google, create OAuth credentials in Google Cloud using Supabase's displayed callback URL (`https://<project-ref>.supabase.co/auth/v1/callback`), then enter the client ID and secret in Supabase.
+3. In **Authentication → URL Configuration**, set the production app as **Site URL** and add both production and local URLs (for example `https://paper-gacha.example/settings` and `http://localhost:5173/settings`) to **Redirect URLs**. Password-recovery and Google sign-in return to `/settings`.
+4. Copy `.env.example` to `.env.local` and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. These are Supabase's public browser credentials. Never expose or add `SUPABASE_SERVICE_ROLE_KEY`; Paper Gacha does not require it. Configure the same two `VITE_` variables in the frontend build environment for deployment.
+
+The existing Cloudflare Worker remains responsible only for OpenAlex/Crossref-facing API requests. Authentication and sync call Supabase directly with the signed-in user's JWT, so the Worker contains no password, session, or Supabase service-role credential.

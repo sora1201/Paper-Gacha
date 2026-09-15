@@ -13,3 +13,5 @@ export type BackupFile = {
   exportedAt:string;
   data:{settings:GachaSettings;preferences:AppPreferences;drawn:DrawnPaperRecord[];favorites:Paper[];history:HistoryEntry[]};
 };
+export type SyncStatus = "synced"|"syncing"|"offline"|"error";
+export type AccountUser = {id:string;email:string|null};

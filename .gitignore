@@ -9,3 +9,8 @@ worker/**/*.d.ts
 vite.config.js
 vite.config.d.ts
 .DS_Store
+.env
+.env.*
+!.env.example
+
+!src/vite-env.d.ts
