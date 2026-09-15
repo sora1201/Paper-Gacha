@@ -39,7 +39,7 @@ async function fetchOpenAlex(topic: SelectedTopic, category: PaperCategory, sett
     filter: filters.join(","),
     sample: "40",
     "per-page": "40",
-    select: "id,title,display_name,authorships,publication_year,abstract_inverted_index,topics,doi,primary_location,best_oa_location,cited_by_count",
+    select: "id,title,display_name,authorships,publication_year,abstract_inverted_index,topics,doi,primary_location,best_oa_location,locations,cited_by_count",
     mailto: "hello@paper-gacha.app",
   });
   if (apiKey) params.set("api_key", apiKey);
