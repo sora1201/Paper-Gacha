@@ -1,0 +1,11 @@
+import { describe, expect, it } from "vitest";
+import { mergeSyncData, prepareCacheForUser, syncOwnerKey, type SyncData } from "./sync";
+import { defaults } from "./storage";
+const paper=(id:string)=>({id,title:id,authors:[],year:2024,abstract:null,topics:[],doi:null,landingPageUrl:null,openAccessUrl:null,citedByCount:0,category:"expert" as const});
+const data=(at:string):SyncData=>({schemaVersion:1,settings:defaults,settingsUpdatedAt:at,preferences:{language:"en"},preferencesUpdatedAt:at,favorites:[],history:[],drawn:[],updatedAt:at});
+describe("sync merge",()=>{
+ it("uses last-write-wins for settings and language",()=>{const local=data("2026-01-02T00:00:00.000Z");local.settings={...defaults,expertCount:9};const remote=data("2026-01-01T00:00:00.000Z");expect(mergeSyncData(local,remote).settings.expertCount).toBe(9)});
+ it("safely unions entity collections without duplicates",()=>{const local=data("2026-01-02T00:00:00.000Z"),remote=data("2026-01-01T00:00:00.000Z");local.favorites=[paper("A")];remote.favorites=[paper("A"),paper("B")];local.drawn=[{paperId:"A",drawnAt:local.updatedAt}];remote.drawn=[{paperId:"A",drawnAt:remote.updatedAt}];expect(mergeSyncData(local,remote).favorites.map(x=>x.id)).toEqual(["A","B"]);expect(mergeSyncData(local,remote).drawn).toHaveLength(1)});
+ it("keeps only the newest 100 unique history entries",()=>{const local=data("2026-01-02T00:00:00.000Z"),remote=data("2026-01-01T00:00:00.000Z");remote.history=Array.from({length:110},(_,i)=>({id:`H${i}`,drawnAt:new Date(1000+i).toISOString(),papers:[]}));expect(mergeSyncData(local,remote).history).toHaveLength(100);expect(mergeSyncData(local,remote).history[0].id).toBe("H109")});
+});
+describe("account cache isolation",()=>{it("clears the previous user's data before another account syncs",()=>{const values=new Map<string,string>([[syncOwnerKey,"user-a"],["paper-gacha:favorites","secret"]]);Object.defineProperty(globalThis,"localStorage",{configurable:true,value:{getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>values.set(k,v),removeItem:(k:string)=>values.delete(k)}});prepareCacheForUser("user-b");expect(values.get("paper-gacha:favorites")).toBeUndefined();expect(values.get(syncOwnerKey)).toBe("user-b")})});

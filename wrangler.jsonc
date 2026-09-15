@@ -1,1 +1,13 @@
-{"name":"paper-gacha","main":"worker/index.ts","compatibility_date":"2026-08-01","assets":{"directory":"./dist","binding":"ASSETS","not_found_handling":"single-page-application"}}
+{
+  "name": "paper-gacha",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {"directory":"./dist","binding":"ASSETS","not_found_handling":"single-page-application"},
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "paper-gacha",
+    "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+    "migrations_dir": "migrations"
+  }]
+}
