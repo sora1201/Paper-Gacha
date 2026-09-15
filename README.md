@@ -35,7 +35,7 @@ Choose topics from the [OpenAlex](https://openalex.org/) catalog, decide how man
 4. Return to **Gacha** and draw a new set of papers.
 5. Favorite interesting results, open the best available source, or revisit a draw from **History**.
 
-For each selected topic, the Cloudflare Worker requests a sample of eligible, non-retracted works from OpenAlex. The browser shuffles those candidates, alternates across the selected topics in each category, and skips IDs recorded by earlier draws. A draw can contain fewer papers than requested when OpenAlex does not return enough unseen candidates.
+For each selected topic, the Cloudflare Worker requests a sample of eligible, non-retracted works from OpenAlex. For the expert and related categories, all selected keywords form one query and Workers AI ranks candidate title-and-abstract text by semantic similarity, with a small boost for explicit keyword matches. Abstract-less papers are kept only as low-priority fallbacks. The deliberately different category remains shuffled for serendipity, and the browser skips IDs recorded by earlier draws. A draw can contain fewer papers than requested when OpenAlex does not return enough unseen candidates.
 
 ## Technology
 
@@ -43,7 +43,7 @@ For each selected topic, the Cloudflare Worker requests a sample of eligible, no
 | --- | --- |
 | Frontend | React 19, TypeScript, React Router, i18next, Lucide React |
 | Build | Vite 7 |
-| API | Cloudflare Workers |
+| API | Cloudflare Workers and Workers AI |
 | Research data | OpenAlex API |
 | Persistence | Browser `localStorage`; portable JSON backup export/import |
 | Tests | Vitest |
@@ -110,7 +110,7 @@ Paper-Gacha/
 ├── worker/
 │   ├── index.ts          # Cloudflare Worker routes and OpenAlex requests
 │   └── mapper.ts         # OpenAlex work normalization
-├── wrangler.jsonc        # Worker and static asset configuration
+├── wrangler.toml         # Worker, Workers AI, and static asset configuration
 └── vite.config.ts        # Vite configuration
 ```
 
@@ -123,7 +123,13 @@ npx wrangler login
 npm run deploy
 ```
 
-The deploy script builds the frontend before publishing the Worker and its static assets. Update the Worker name and compatibility date in `wrangler.jsonc` if your deployment requires different values.
+The deploy script builds the frontend before publishing the Worker and its static assets. Update the Worker name and compatibility date in `wrangler.toml` if your deployment requires different values.
+
+### Workers AI ranking
+
+`wrangler.toml` declares the Workers AI binding as `AI`; no API token or secret is placed in the application. When configuring through the Cloudflare dashboard instead, add a Workers AI binding with the same variable name. The Worker uses `@cf/qwen/qwen3-embedding-0.6b` to rank the expert and related pools. It limits both the number of embedded candidates and abstract length so a draw does not send the entire OpenAlex response to the model.
+
+If the binding is absent, the free allocation is exhausted, or Workers AI is temporarily unavailable, the API still returns papers and the browser uses the existing shuffled, topic-alternating selection. Model failures are not included in user-facing responses. The outside-interest category is never semantically ranked, preserving its serendipity.
 
 ## Privacy and data
 
@@ -162,7 +168,7 @@ Signed-in users can synchronize settings, language, favorites, the latest 100 hi
 npx wrangler d1 create paper-gacha
 ```
 
-Copy the returned database ID into `d1_databases[0].database_id` in `wrangler.jsonc` (replace `REPLACE_WITH_YOUR_D1_DATABASE_ID`). The binding name must remain `DB`.
+Copy the returned database ID into `d1_databases[0].database_id` in `wrangler.toml` (replace `REPLACE_WITH_YOUR_D1_DATABASE_ID`). The binding name must remain `DB`.
 
 ### 2. Apply migrations
 

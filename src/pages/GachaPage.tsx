@@ -57,11 +57,11 @@ export function GachaPage({
     setLoading(true);
     setError("");
     try {
-      const [{ candidates }] = await Promise.all([
+      const [{ candidates, ranking }] = await Promise.all([
         fetchCandidates(settings),
         new Promise((resolve) => setTimeout(resolve, 1500)),
       ]);
-      const picked = drawPapers(candidates, settings, getDrawnIds());
+      const picked = drawPapers(candidates, settings, getDrawnIds(), ranking);
       setDispensing(true);
       await new Promise((resolve) => setTimeout(resolve, 420));
       const entry = saveDraw(picked);
