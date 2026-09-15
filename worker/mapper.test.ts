@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { mapCrossrefWork } from "./mapper";
+import { mapCrossrefWork, mapWork } from "./mapper";
+
+describe("mapWork", () => {
+  it("prefers an open repository copy over the publisher location", () => {
+    const paper = mapWork({
+      id: "https://openalex.org/W123",
+      title: "Repository paper",
+      best_oa_location: { landing_page_url: "https://journals.sagepub.com/doi/example" },
+      locations: [{
+        is_oa: true,
+        pdf_url: "https://repository.example/paper.pdf",
+        source: { type: "repository" },
+      }],
+    }, "expert");
+
+    expect(paper.openAccessUrl).toBe("https://repository.example/paper.pdf");
+  });
+});
 
 describe("mapCrossrefWork", () => {
   it("maps Crossref fallback results into paper cards", () => {

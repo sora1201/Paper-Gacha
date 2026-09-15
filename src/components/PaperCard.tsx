@@ -3,9 +3,8 @@ import { ArrowUpRight,Heart,Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { deliverShare,ieeeCitation,shareTextFor,socialShareUrl } from "../lib/citation";
 import type { SocialShareTarget } from "../lib/citation";
+import { paperAccessUrl } from "../lib/paper-link";
 import type { Paper } from "../types";
-
-const urlFor=(paper:Paper)=>paper.openAccessUrl||(paper.doi?`https://doi.org/${paper.doi}`:paper.landingPageUrl);
 
 export function PaperCard({paper,isFavorite,onFavorite,onToast}:{paper:Paper;isFavorite:boolean;onFavorite:(p:Paper)=>void;onToast:(s:string)=>void}) {
   const {t}=useTranslation();
@@ -14,7 +13,7 @@ export function PaperCard({paper,isFavorite,onFavorite,onToast}:{paper:Paper;isF
   const [memo,setMemo]=useState("");
   const memoRef=useRef<HTMLTextAreaElement>(null);
   const shareButtonRef=useRef<HTMLButtonElement>(null);
-  const url=urlFor(paper);
+  const url=paperAccessUrl(paper);
   const citation=ieeeCitation(paper);
 
   useEffect(()=>{
