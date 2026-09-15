@@ -32,15 +32,18 @@ export function GachaPage({
   const [dispensing, setDispensing] = useState(false);
   const [error, setError] = useState("");
   const resultsRef = useRef<HTMLElement>(null);
+  const shouldScrollToResults = useRef(false);
 
   useEffect(() => {
-    if (papers.length === 0) return;
+    if (loading || !shouldScrollToResults.current || papers.length === 0) return;
+
+    shouldScrollToResults.current = false;
 
     resultsRef.current?.scrollIntoView({
       behavior: "smooth",
       block: "start",
     });
-  }, [papers]);
+  }, [loading, papers]);
 
   const valid =
     settings.expertCount + settings.relatedCount + settings.otherCount > 0 &&
@@ -65,6 +68,7 @@ export function GachaPage({
       setDispensing(true);
       await new Promise((resolve) => setTimeout(resolve, 420));
       const entry = saveDraw(picked);
+      shouldScrollToResults.current = true;
       onDraw(entry);
       await new Promise((resolve) => setTimeout(resolve, 380));
     } catch {
