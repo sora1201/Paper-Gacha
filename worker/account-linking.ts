@@ -8,4 +8,7 @@ export const accountLinking = {
   trustedProviders: ["google"],
   disableImplicitLinking: false,
   allowDifferentEmails: false,
+  // Local credential users may be unverified while email delivery is disabled.
+  // The trusted Google provider still has to supply the same verified email.
+  requireLocalEmailVerified: false,
 } as const;
