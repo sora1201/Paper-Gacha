@@ -1,9 +1,10 @@
-import { Settings2, Sparkles } from "lucide-react";
+import { BookOpen, ExternalLink, Settings2, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { PaperCard } from "../components/PaperCard";
 import { fetchCandidates } from "../lib/api";
+import { amazonSearchUrl, relatedBookTopics } from "../lib/amazon";
 import { drawPapers } from "../lib/draw";
 import { getDrawnIds, saveDraw } from "../lib/storage";
 import type { GachaSettings, HistoryEntry, Paper, PaperCategory } from "../types";
@@ -27,12 +28,13 @@ export function GachaPage({
   onFavorite,
   onToast,
 }: GachaPageProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [dispensing, setDispensing] = useState(false);
   const [error, setError] = useState("");
   const resultsRef = useRef<HTMLElement>(null);
   const shouldScrollToResults = useRef(false);
+  const bookTopics = relatedBookTopics(settings);
 
   useEffect(() => {
     if (loading || !shouldScrollToResults.current || papers.length === 0) return;
@@ -197,6 +199,37 @@ export function GachaPage({
             );
           })}
         </section>
+      )}
+
+      {bookTopics.length > 0 && (
+        <aside className="related-books" aria-labelledby="related-books-title">
+          <div className="related-books-heading">
+            <BookOpen size={20} aria-hidden="true" />
+            <div>
+              <p className="eyebrow">{t("gacha.relatedBooksLabel")}</p>
+              <h2 id="related-books-title">{t("gacha.relatedBooksTitle")}</h2>
+            </div>
+          </div>
+          <div className="related-book-links">
+            {bookTopics.map((topic) => (
+              <a
+                key={`${topic.id}-${topic.name}`}
+                href={amazonSearchUrl(
+                  topic.name,
+                  i18n.resolvedLanguage ?? i18n.language,
+                  import.meta.env.VITE_AMAZON_ASSOCIATE_TAG,
+                )}
+                target="_blank"
+                rel="sponsored noopener noreferrer"
+              >
+                <span>{topic.name}</span>
+                <ExternalLink size={15} aria-hidden="true" />
+              </a>
+            ))}
+          </div>
+          <p className="affiliate-disclosure">{t("gacha.affiliateDisclosure")}</p>
+          <p className="affiliate-neutrality">{t("gacha.affiliateNeutrality")}</p>
+        </aside>
       )}
     </div>
   );

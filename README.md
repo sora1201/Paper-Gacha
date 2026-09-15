@@ -203,6 +203,11 @@ npm run build
 npx wrangler dev
 ```
 
+To add Amazon Associates attribution to the related-book search links, set
+`VITE_AMAZON_ASSOCIATE_TAG` in `.env.local` (or in the frontend build
+environment). This is a public tracking ID embedded in generated links, **not a
+secret**. If it is omitted, the links remain ordinary Amazon search links.
+
 The Vite-only server does not run Worker authentication routes. Use Wrangler when testing sign-in or sync.
 
 ### 4. Configure Cloudflare secrets
