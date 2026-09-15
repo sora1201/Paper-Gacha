@@ -221,6 +221,8 @@ In Google Cloud Console, create a Web application OAuth client. Add these author
 
 Add `http://localhost:8787` and the production origin as authorized JavaScript origins where requested. The Google client ID and secret belong only in `.dev.vars` locally and Cloudflare secrets in production. Also keep `BETTER_AUTH_URL`/`APP_ORIGIN` aligned with the URL being tested so Better Auth validates redirects against the correct trusted origin.
 
+`BETTER_AUTH_URL` and `APP_ORIGIN` must be origins (for example, `https://paper-gacha.sora-yamada.workers.dev`), not URLs ending in `/api/auth`. Google sign-in supplies the same-origin `/settings` success and error callbacks. On HTTPS, Better Auth's session cookie is explicitly issued with `HttpOnly`, `Secure`, `SameSite=Lax`, and `Path=/`, so it is available to the subsequent `/api/auth/get-session` request after the OAuth callback.
+
 ### 6. Configure email delivery
 
 For Resend, verify the sending domain/address, create an API key, store it as `RESEND_API_KEY`, and configure `EMAIL_FROM`. Verification and reset links use Better Auth's `/api/auth/*` flow and return to the configured application origin. For another service, preserve the `sendEmail(env, to, subject, html)` boundary and keep its API key in a Worker secret.

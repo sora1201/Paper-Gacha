@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import { authSchema } from "./auth-schema";
+import { googleCallbackError, isGoogleCallback, normalizeGoogleCallbackResponse } from "./oauth-callback";
 
 export type AuthEnv = {
   DB: D1Database;
@@ -31,7 +32,10 @@ async function sendEmail(env: AuthEnv, to: string, subject: string, html: string
 }
 
 export function createAuth(env: AuthEnv, requestUrl: string) {
-  const origin = env.APP_ORIGIN ?? new URL(requestUrl).origin;
+  const requestOrigin = new URL(requestUrl).origin;
+  const origin = new URL(env.APP_ORIGIN ?? requestOrigin).origin;
+  const authBaseURL = new URL(env.BETTER_AUTH_URL ?? origin).origin;
+  const productionHttps = authBaseURL.startsWith("https://");
   const emailVerificationEnabled = env.ENABLE_EMAIL_VERIFICATION === "true" && Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
   const passwordResetEnabled = env.ENABLE_PASSWORD_RESET === "true" && Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
   return betterAuth({
@@ -40,9 +44,18 @@ export function createAuth(env: AuthEnv, requestUrl: string) {
       schema: authSchema,
     }),
     secret: env.BETTER_AUTH_SECRET,
-    baseURL: env.BETTER_AUTH_URL ?? origin,
+    baseURL: authBaseURL,
     basePath: "/api/auth",
     trustedOrigins: [origin],
+    advanced: {
+      useSecureCookies: productionHttps,
+      defaultCookieAttributes: {
+        httpOnly: true,
+        secure: productionHttps,
+        sameSite: "lax",
+        path: "/",
+      },
+    },
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: emailVerificationEnabled,
@@ -60,6 +73,20 @@ export function createAuth(env: AuthEnv, requestUrl: string) {
       google: { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET },
     } : {},
   });
+}
+
+export async function handleAuth(request: Request, env: AuthEnv) {
+  const origin = new URL(env.APP_ORIGIN ?? request.url).origin;
+  try {
+    const response = await createAuth(env, request.url).handler(request);
+    return normalizeGoogleCallbackResponse(request, response, origin);
+  } catch (error) {
+    if (isGoogleCallback(request)) {
+      console.error("Google OAuth callback failed", error);
+      return googleCallbackError(origin);
+    }
+    throw error;
+  }
 }
 
 export type AuthInstance = ReturnType<typeof createAuth>;
