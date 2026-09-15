@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import { authSchema } from "./auth-schema";
 import { googleCallbackError, isGoogleCallback, normalizeGoogleCallbackResponse } from "./oauth-callback";
+import { accountLinking } from "./account-linking";
 
 export type AuthEnv = {
   DB: D1Database;
@@ -47,6 +48,7 @@ export function createAuth(env: AuthEnv, requestUrl: string) {
     baseURL: authBaseURL,
     basePath: "/api/auth",
     trustedOrigins: [origin],
+    account: { accountLinking },
     advanced: {
       useSecureCookies: productionHttps,
       defaultCookieAttributes: {

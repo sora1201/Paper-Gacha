@@ -223,6 +223,8 @@ Add `http://localhost:8787` and the production origin as authorized JavaScript o
 
 `BETTER_AUTH_URL` and `APP_ORIGIN` must be origins (for example, `https://paper-gacha.sora-yamada.workers.dev`), not URLs ending in `/api/auth`. Google sign-in supplies the same-origin `/settings` success and error callbacks. On HTTPS, Better Auth's session cookie is explicitly issued with `HttpOnly`, `Secure`, `SameSite=Lax`, and `Path=/`, so it is available to the subsequent `/api/auth/get-session` request after the OAuth callback.
 
+Google is the only trusted provider for implicit account linking. When Google returns its verified email and an existing email/password user has that same email, Better Auth attaches the Google account to that existing user rather than creating a second sync identity. Different email addresses are never implicitly linked, and an external account already owned by another user is not moved. No D1 migration or Google Cloud Console change is required for this policy.
+
 ### 6. Configure email delivery
 
 For Resend, verify the sending domain/address, create an API key, store it as `RESEND_API_KEY`, and configure `EMAIL_FROM`. Verification and reset links use Better Auth's `/api/auth/*` flow and return to the configured application origin. For another service, preserve the `sendEmail(env, to, subject, html)` boundary and keep its API key in a Worker secret.
