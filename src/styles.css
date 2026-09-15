@@ -75,3 +75,4 @@
 @media(max-width:800px){.history-day{display:block;padding:28px 0}.history-day>h2{position:static;font-size:25px;margin-bottom:22px}.reference-list li{grid-template-columns:28px minmax(0,1fr)}.reference-actions{grid-column:2;justify-content:flex-start;flex-wrap:wrap}.reference-content p{font-size:16px}}
 /* Keep drawn papers visible below the sticky navigation after auto-scrolling. */
 .results{scroll-margin-top:102px}
+.history-draw-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:10px}.history-draw-heading .history-time{margin:0}.history-delete{display:flex;align-items:center;gap:5px;border:0;background:transparent;color:var(--muted);padding:6px 8px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer}.history-delete:hover{color:#a33f3f;background:#f8e1dc}

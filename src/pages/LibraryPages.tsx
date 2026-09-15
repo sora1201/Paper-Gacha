@@ -1,4 +1,4 @@
-import { ArrowUpRight, BookHeart, Heart, History as HistoryIcon, Share2 } from "lucide-react";
+import { ArrowUpRight, BookHeart, Heart, History as HistoryIcon, Share2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PaperCard } from "../components/PaperCard";
 import { deliverShare, ieeeCitation } from "../lib/citation";
@@ -13,7 +13,7 @@ export function FavoritesPage({favorites,onFavorite,onToast}:{favorites:Paper[];
 
 const paperUrl = (paper: Paper) => paper.openAccessUrl || (paper.doi ? `https://doi.org/${paper.doi}` : paper.landingPageUrl);
 
-export function HistoryPage({history,favorites,onFavorite,onToast}:{history:HistoryEntry[];favorites:Paper[];onFavorite:(p:Paper)=>void;onToast:(s:string)=>void}) {
+export function HistoryPage({history,favorites,onFavorite,onDelete,onToast}:{history:HistoryEntry[];favorites:Paper[];onFavorite:(p:Paper)=>void;onDelete:(id:string)=>void;onToast:(s:string)=>void}) {
   const {t,i18n}=useTranslation();
   const dateFormatter = new Intl.DateTimeFormat(i18n.language,{dateStyle:"long"});
   const timeFormatter = new Intl.DateTimeFormat(i18n.language,{timeStyle:"short"});
@@ -33,13 +33,19 @@ export function HistoryPage({history,favorites,onFavorite,onToast}:{history:Hist
       if((error as Error).name!=="AbortError") onToast(t("common.shareFailed"));
     }
   }
+  function deleteDraw(entry:HistoryEntry) {
+    if(window.confirm(t("history.deleteConfirm"))) {
+      onDelete(entry.id);
+      onToast(t("history.deleted"));
+    }
+  }
 
   return <div className="page library-page history-page">
     <header className="page-heading"><p className="eyebrow">ARCHIVE</p><h1>{t("history.title")}</h1><p>{t("history.description")}</p></header>
     {groups.length ? <div className="history-groups">{groups.map(group => <section className="history-day" key={group.date}>
       <h2>{group.date}</h2>
       <div className="history-day-draws">{group.entries.map(entry => <div className="history-draw" key={entry.id}>
-        <p className="history-time">{t("history.drawnAt",{time:timeFormatter.format(new Date(entry.drawnAt))})}</p>
+        <div className="history-draw-heading"><p className="history-time">{t("history.drawnAt",{time:timeFormatter.format(new Date(entry.drawnAt))})}</p><button className="history-delete" onClick={()=>deleteDraw(entry)} aria-label={t("history.delete")}><Trash2 size={15}/><span>{t("history.delete")}</span></button></div>
         <ol className="reference-list">{entry.papers.map(paper => {
           const url=paperUrl(paper);
           const favorite=favorites.some(item=>item.id===paper.id);

@@ -1,5 +1,5 @@
 import {beforeEach,describe,expect,it,vi} from "vitest";
-import {BackupError,createBackup,defaults,getHistory,keys,restoreBackup,saveDraw} from "./storage";
+import {BackupError,createBackup,defaults,deleteHistoryEntry,getDrawnIds,getHistory,keys,restoreBackup,saveDraw} from "./storage";
 
 class MemoryStorage {
   values=new Map<string,string>();
@@ -27,5 +27,17 @@ describe("draw storage",()=>{
     const entry=saveDraw([paper]);
     expect(entry.papers).toEqual([paper]);
     expect(getHistory()[0]).toEqual(entry);
+  });
+  it("deletes a history entry and makes its papers eligible for another draw",()=>{
+    const entry=saveDraw([paper]);
+    expect(getDrawnIds()).toContain(paper.id);
+    expect(deleteHistoryEntry(entry.id)).toEqual([]);
+    expect(getHistory()).toEqual([]);
+    expect(getDrawnIds()).not.toContain(paper.id);
+  });
+  it("leaves storage unchanged when the history entry does not exist",()=>{
+    const entry=saveDraw([paper]);
+    expect(deleteHistoryEntry("missing")).toEqual([entry]);
+    expect(getDrawnIds()).toContain(paper.id);
   });
 });
