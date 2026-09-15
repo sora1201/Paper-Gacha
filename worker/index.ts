@@ -2,6 +2,7 @@ import { mapCrossrefWork, mapWork } from "./mapper";
 import type { GachaSettings, PaperCategory, SelectedTopic } from "../src/types";
 import { createAuth, handleAuth, type AuthEnv } from "./auth";
 import { handleSync } from "./sync-store";
+import { tryRankPapers, type AiBinding } from "./ranking";
 
 const openAlexBase = "https://api.openalex.org";
 const crossrefBase = "https://api.crossref.org";
@@ -12,6 +13,7 @@ const requestHeaders = {
 type Env = AuthEnv & {
   ASSETS: { fetch(request: Request): Promise<Response> };
   OPENALEX_API_KEY?: string;
+  AI?: AiBinding;
 };
 
 async function fetchJson(url: string) {
@@ -106,7 +108,14 @@ export default {
         if (!hasResults && failures.length) {
           return json({ error: "Paper services are temporarily unavailable", details: failures }, 503);
         }
-        return json({ candidates }, 200);
+        const ranking: Partial<Record<PaperCategory, string[]>> = {};
+        await Promise.all((["expert", "related"] as PaperCategory[]).map(async category => {
+          const topics = settings[`${category}Topics` as keyof GachaSettings] as SelectedTopic[];
+          const papers = topics.flatMap(topic => candidates[category][topic.id] || []);
+          const order = await tryRankPapers(env.AI, topics, papers);
+          if (order) ranking[category] = order;
+        }));
+        return json({ candidates, ...(Object.keys(ranking).length ? { ranking } : {}) }, 200);
       }
       if (url.pathname.startsWith("/api/")) return json({ error: "Not found" }, 404);
       return env.ASSETS.fetch(request);

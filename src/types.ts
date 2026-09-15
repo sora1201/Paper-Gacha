@@ -7,6 +7,7 @@ export type AppPreferences = {language:Language};
 export type DrawnPaperRecord = {paperId:string;drawnAt:string};
 export type HistoryEntry = {id:string;drawnAt:string;papers:Paper[]};
 export type GachaCandidates = Record<PaperCategory, Record<string, Paper[]>>;
+export type GachaRanking = Partial<Record<PaperCategory, string[]>>;
 export type BackupFile = {
   format:"paper-gacha-backup";
   version:1;
