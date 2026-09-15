@@ -12,7 +12,11 @@
   "d1_databases": [{
     "binding": "DB",
     "database_name": "paper-gacha",
-    "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+    "database_id": "7ca6113b-3a45-4d8d-8eb9-041364927ed7",
     "migrations_dir": "migrations"
-  }]
+  }],
+  "vars": {
+    "BETTER_AUTH_URL": "https://paper-gacha.sora-yamada.workers.dev",
+    "APP_ORIGIN": "https://paper-gacha.sora-yamada.workers.dev"
+    }
 }
