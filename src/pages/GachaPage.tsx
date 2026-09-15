@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { PaperCard } from "../components/PaperCard";
-import { fetchCandidates } from "../lib/api";
-import { amazonSearchUrl, relatedBookTopics } from "../lib/amazon";
+import { fetchCandidates, fetchRelatedBooks } from "../lib/api";
+import { amazonSearchUrl, paperBookKeywords } from "../lib/amazon";
 import { drawPapers } from "../lib/draw";
 import { getDrawnIds, saveDraw } from "../lib/storage";
-import type { GachaSettings, HistoryEntry, Paper, PaperCategory } from "../types";
+import type { GachaSettings, HistoryEntry, Paper, PaperCategory, RelatedBook } from "../types";
 
 const categories: PaperCategory[] = ["expert", "related", "other"];
 
@@ -34,7 +34,19 @@ export function GachaPage({
   const [error, setError] = useState("");
   const resultsRef = useRef<HTMLElement>(null);
   const shouldScrollToResults = useRef(false);
-  const bookTopics = relatedBookTopics(settings);
+  const [relatedBooks, setRelatedBooks] = useState<RelatedBook[]>([]);
+
+  useEffect(() => {
+    const keywords = paperBookKeywords(papers);
+    if (!keywords.length) { setRelatedBooks([]); return; }
+    const controller = new AbortController();
+    void fetchRelatedBooks(keywords).then(({ books }) => {
+      if (!controller.signal.aborted) setRelatedBooks(books);
+    }).catch(() => {
+      if (!controller.signal.aborted) setRelatedBooks([]);
+    });
+    return () => controller.abort();
+  }, [papers]);
 
   useEffect(() => {
     if (loading || !shouldScrollToResults.current || papers.length === 0) return;
@@ -201,7 +213,7 @@ export function GachaPage({
         </section>
       )}
 
-      {bookTopics.length > 0 && (
+      {relatedBooks.length > 0 && (
         <aside className="related-books" aria-labelledby="related-books-title">
           <div className="related-books-heading">
             <BookOpen size={20} aria-hidden="true" />
@@ -211,18 +223,19 @@ export function GachaPage({
             </div>
           </div>
           <div className="related-book-links">
-            {bookTopics.map((topic) => (
+            {relatedBooks.map((book) => (
               <a
-                key={`${topic.id}-${topic.name}`}
+                key={book.id}
                 href={amazonSearchUrl(
-                  topic.name,
+                  book.isbn,
                   i18n.resolvedLanguage ?? i18n.language,
                   import.meta.env.VITE_AMAZON_ASSOCIATE_TAG,
                 )}
                 target="_blank"
                 rel="sponsored noopener noreferrer"
               >
-                <span>{topic.name}</span>
+                <img src={book.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" />
+                <span><strong>{book.title}</strong>{book.authors.length > 0 && <small>{book.authors.join(", ")}</small>}</span>
                 <ExternalLink size={15} aria-hidden="true" />
               </a>
             ))}

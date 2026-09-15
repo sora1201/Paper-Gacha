@@ -1,18 +1,14 @@
-import type { GachaSettings, SelectedTopic } from "../types";
+import type { Paper } from "../types";
 
-export function relatedBookTopics(settings: GachaSettings): SelectedTopic[] {
+export function paperBookKeywords(papers: Paper[], limit = 3): string[] {
   const seen = new Set<string>();
 
-  return [
-    ...settings.expertTopics,
-    ...settings.relatedTopics,
-    ...settings.otherTopics,
-  ].filter((topic) => {
+  return papers.flatMap((paper) => paper.topics).filter((topic) => {
     const key = topic.name.trim().toLocaleLowerCase();
-    if (!key || seen.has(key) || seen.size >= 3) return false;
+    if (!key || seen.has(key) || seen.size >= limit) return false;
     seen.add(key);
     return true;
-  });
+  }).map((topic) => topic.name);
 }
 
 export function amazonSearchUrl(

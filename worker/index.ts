@@ -16,6 +16,27 @@ type Env = AuthEnv & {
   AI?: AiBinding;
 };
 
+type GoogleBookVolume = { id?:string; volumeInfo?:{ title?:string; authors?:string[]; imageLinks?:{ thumbnail?:string }; industryIdentifiers?:{type?:string;identifier?:string}[] } };
+
+async function findRelatedBook(keyword:string) {
+  const params = new URLSearchParams({ q: keyword, maxResults: "5", printType: "books", orderBy: "relevance" });
+  const data = await fetchJson(`https://www.googleapis.com/books/v1/volumes?${params}`) as {items?:GoogleBookVolume[]};
+  for (const item of data.items ?? []) {
+    const info = item.volumeInfo;
+    const isbn = info?.industryIdentifiers?.find(identifier => identifier.type === "ISBN_13")?.identifier
+      ?? info?.industryIdentifiers?.find(identifier => identifier.type === "ISBN_10")?.identifier;
+    const thumbnail = info?.imageLinks?.thumbnail;
+    if (item.id && info?.title && isbn && thumbnail) return {
+      id: item.id,
+      title: info.title,
+      authors: info.authors ?? [],
+      thumbnail: thumbnail.replace(/^http:/, "https:"),
+      isbn,
+    };
+  }
+  return null;
+}
+
 async function fetchJson(url: string) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 12000);
@@ -116,6 +137,21 @@ export default {
           if (order) ranking[category] = order;
         }));
         return json({ candidates, ...(Object.keys(ranking).length ? { ranking } : {}) }, 200);
+      }
+      if (url.pathname === "/api/books" && request.method === "POST") {
+        const body = await request.json() as {keywords?:unknown};
+        if (!Array.isArray(body.keywords) || !body.keywords.every(keyword => typeof keyword === "string")) {
+          return json({ error: "Invalid keywords" }, 400);
+        }
+        const keywords = body.keywords.map(keyword => keyword.trim()).filter(Boolean).slice(0, 3);
+        const settled = await Promise.allSettled(keywords.map(findRelatedBook));
+        const seen = new Set<string>();
+        const books = settled.flatMap(result => {
+          if (result.status !== "fulfilled" || !result.value || seen.has(result.value.isbn)) return [];
+          seen.add(result.value.isbn);
+          return [result.value];
+        });
+        return json({ books });
       }
       if (url.pathname.startsWith("/api/")) return json({ error: "Not found" }, 404);
       return env.ASSETS.fetch(request);

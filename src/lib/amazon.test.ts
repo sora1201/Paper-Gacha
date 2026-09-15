@@ -1,26 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { amazonSearchUrl, relatedBookTopics } from "./amazon";
-import type { GachaSettings } from "../types";
+import { amazonSearchUrl, paperBookKeywords } from "./amazon";
+import type { Paper } from "../types";
 
-const settings: GachaSettings = {
-  expertTopics: [{ id: "1", name: "Machine Learning" }],
-  relatedTopics: [
-    { id: "2", name: "machine learning" },
-    { id: "3", name: "Statistics" },
-  ],
-  otherTopics: [
-    { id: "4", name: "Philosophy" },
-    { id: "5", name: "History" },
-  ],
-  expertCount: 3,
-  relatedCount: 2,
-  otherCount: 1,
-  publicationYears: 3,
-};
+const paper = (id:string, topics:Paper["topics"]):Paper => ({id,title:id,authors:[],year:null,abstract:null,topics,doi:null,landingPageUrl:null,openAccessUrl:null,citedByCount:0,category:"expert"});
 
-describe("relatedBookTopics", () => {
-  it("deduplicates topic names in category order and limits the list to three", () => {
-    expect(relatedBookTopics(settings).map((topic) => topic.name)).toEqual([
+describe("paperBookKeywords", () => {
+  it("uses drawn-paper topics, deduplicates names, and limits the list to three", () => {
+    expect(paperBookKeywords([
+      paper("one", [{id:"1",name:"Machine Learning"},{id:"2",name:"Statistics"}]),
+      paper("two", [{id:"3",name:"machine learning"},{id:"4",name:"Philosophy"},{id:"5",name:"History"}]),
+    ])).toEqual([
       "Machine Learning",
       "Statistics",
       "Philosophy",

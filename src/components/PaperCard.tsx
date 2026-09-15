@@ -1,14 +1,15 @@
 import { useEffect,useRef,useState } from "react";
-import { ArrowUpRight,Heart,Share2 } from "lucide-react";
+import { ArrowUpRight,BookOpen,Heart,Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { deliverShare,ieeeCitation,shareTextFor,socialShareUrl } from "../lib/citation";
 import type { SocialShareTarget } from "../lib/citation";
 import type { Paper } from "../types";
+import { amazonSearchUrl } from "../lib/amazon";
 
 const urlFor=(paper:Paper)=>paper.openAccessUrl||(paper.doi?`https://doi.org/${paper.doi}`:paper.landingPageUrl);
 
 export function PaperCard({paper,isFavorite,onFavorite,onToast}:{paper:Paper;isFavorite:boolean;onFavorite:(p:Paper)=>void;onToast:(s:string)=>void}) {
-  const {t}=useTranslation();
+  const {t,i18n}=useTranslation();
   const [expanded,setExpanded]=useState(false);
   const [shareOpen,setShareOpen]=useState(false);
   const [memo,setMemo]=useState("");
@@ -16,6 +17,7 @@ export function PaperCard({paper,isFavorite,onFavorite,onToast}:{paper:Paper;isF
   const shareButtonRef=useRef<HTMLButtonElement>(null);
   const url=urlFor(paper);
   const citation=ieeeCitation(paper);
+  const bookKeyword=paper.topics.slice(0,3).map(topic=>topic.name).join(" ");
 
   useEffect(()=>{
     if(!shareOpen)return;
@@ -48,7 +50,7 @@ export function PaperCard({paper,isFavorite,onFavorite,onToast}:{paper:Paper;isF
       <div className="topic-row">{paper.topics.slice(0,3).map(topic=><span key={topic.id}>{topic.name}</span>)}</div>
       <div className={`abstract ${expanded?"expanded":""}`}>{paper.abstract||t("common.noAbstract")}</div>
       {paper.abstract&&<button className="text-button" onClick={()=>setExpanded(!expanded)}>{t(expanded?"common.showLess":"common.showMore")}</button>}
-      <div className="card-actions"><a className={`paper-link ${!url?"disabled":""}`} href={url??undefined} target="_blank" rel="noreferrer" aria-disabled={!url}>{t("common.open")} <ArrowUpRight size={16}/></a><button ref={shareButtonRef} className="share" onClick={()=>setShareOpen(true)}><Share2 size={17}/>{t("common.share")}</button></div>
+      <div className="card-actions"><a className={`paper-link ${!url?"disabled":""}`} href={url??undefined} target="_blank" rel="noreferrer" aria-disabled={!url}>{t("common.open")} <ArrowUpRight size={16}/></a>{bookKeyword&&<a className="paper-book-link" href={amazonSearchUrl(bookKeyword,i18n.resolvedLanguage??i18n.language,import.meta.env.VITE_AMAZON_ASSOCIATE_TAG)} target="_blank" rel="sponsored noopener noreferrer"><BookOpen size={15}/>{t("common.relatedBook")}<small>{t("common.affiliate")}</small></a>}<button ref={shareButtonRef} className="share" onClick={()=>setShareOpen(true)}><Share2 size={17}/>{t("common.share")}</button></div>
     </article>
     {shareOpen&&<div className="share-modal-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)closeShare();}}>
       <div className="share-modal" role="dialog" aria-modal="true" aria-labelledby={`share-title-${paper.id}`}>
