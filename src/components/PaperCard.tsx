@@ -5,10 +5,11 @@ import { deliverShare,ieeeCitation,shareTextFor,socialShareUrl } from "../lib/ci
 import type { SocialShareTarget } from "../lib/citation";
 import type { Paper } from "../types";
 import { amazonSearchUrl } from "../lib/amazon";
+import { paperBookSearchQuery } from "../lib/bookSearch";
 
 const urlFor=(paper:Paper)=>paper.openAccessUrl||(paper.doi?`https://doi.org/${paper.doi}`:paper.landingPageUrl);
 
-export function PaperCard({paper,isFavorite,onFavorite,onToast}:{paper:Paper;isFavorite:boolean;onFavorite:(p:Paper)=>void;onToast:(s:string)=>void}) {
+export function PaperCard({paper,isFavorite,onFavorite,onToast,researchTopics=[]}:{paper:Paper;isFavorite:boolean;onFavorite:(p:Paper)=>void;onToast:(s:string)=>void;researchTopics?:string[]}) {
   const {t,i18n}=useTranslation();
   const [expanded,setExpanded]=useState(false);
   const [shareOpen,setShareOpen]=useState(false);
@@ -17,7 +18,7 @@ export function PaperCard({paper,isFavorite,onFavorite,onToast}:{paper:Paper;isF
   const shareButtonRef=useRef<HTMLButtonElement>(null);
   const url=urlFor(paper);
   const citation=ieeeCitation(paper);
-  const bookKeyword=paper.topics.slice(0,3).map(topic=>topic.name).join(" ")||paper.title;
+  const bookKeyword=paperBookSearchQuery(paper,researchTopics);
 
   useEffect(()=>{
     if(!shareOpen)return;

@@ -206,6 +206,7 @@ export function GachaPage({
                       )}
                       onFavorite={onFavorite}
                       onToast={onToast}
+                      researchTopics={[...settings.expertTopics,...settings.relatedTopics,...settings.otherTopics].map(topic=>topic.name)}
                     />
                   ))}
                 </div>

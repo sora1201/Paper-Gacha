@@ -1,4 +1,5 @@
 import type { GachaSettings, Paper, RelatedBook } from "../types";
+import { paperExtractedQuery, paperTopicQuery } from "./bookSearch";
 
 function uniqueQueries(values:string[], limit:number) {
   const seen = new Set<string>();
@@ -12,10 +13,11 @@ function uniqueQueries(values:string[], limit:number) {
 
 export function relatedBookQueries(papers:Paper[], settings:GachaSettings, language:string, limit=3):string[] {
   const generic = language.toLowerCase().startsWith("ja") ? "研究" : "academic research";
-  const topics = papers.flatMap(paper => paper.topics.map(topic => topic.name));
+  const topics = papers.map(paperTopicQuery);
+  const extracted = papers.map(paperExtractedQuery);
   const titles = papers.map(paper => paper.title);
   const configured = [...settings.expertTopics,...settings.relatedTopics,...settings.otherTopics].map(topic => topic.name);
-  const queries = uniqueQueries([...topics,...titles,...configured,generic],limit);
+  const queries = uniqueQueries([...topics,...extracted,...configured,...titles,generic],limit);
   while (queries.length < limit) queries.push(generic);
   return queries;
 }
