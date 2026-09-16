@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BookHeart, Clock3, Dices, LogIn, Settings, UserPlus } from "lucide-react";
+import { BookHeart, Clock3, Dices, LogIn, MessageCircle, Settings, UserPlus } from "lucide-react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { FavoritesPage, HistoryPage } from "./pages/LibraryPages";
@@ -95,9 +95,11 @@ export default function App() {
     { to: "/history", key: "history", icon: Clock3 },
     { to: "/settings", key: "settings", icon: Settings },
   ];
+  const feedbackLabel = i18n.language === "ja" ? "お問い合わせ" : "Feedback";
+  const feedbackUrl = "https://docs.google.com/forms/d/e/1FAIpQLSeI2guLuCi6hve4CZjNtQVW0Ua6RrwQR-t_Ztm7egfutvPOwA/viewform";
 
   return <div className="app-shell">
-    <header className="topbar"><NavLink to="/" className="brand"><img className="brand-mark" src="/paper-gacha-app-icon.png" alt=""/><span><strong>{t("brand")}</strong><small>{t("tagline")}</small></span></NavLink><div className="topbar-right"><nav>{nav.map(({to,key,icon:Icon})=><NavLink end={to==="/"} to={to} key={key}><Icon size={18}/>{t(`nav.${key}`)}</NavLink>)}</nav><div className="header-auth">{user?<button className="user-button" onClick={()=>setAuthMode("signin")}><span>{(user.name||user.email).slice(0,1).toUpperCase()}</span><b>{user.name||user.email}</b></button>:<><button className="login-button" onClick={()=>setAuthMode("signin")}><LogIn size={16}/>{t("account.signIn")}</button><button className="signup-button" onClick={()=>setAuthMode("signup")}><UserPlus size={16}/>{t("account.signUp")}</button></>}</div></div></header>
+    <header className="topbar"><NavLink to="/" className="brand"><img className="brand-mark" src="/paper-gacha-app-icon.png" alt=""/><span><strong>{t("brand")}</strong><small>{t("tagline")}</small></span></NavLink><div className="topbar-right"><nav>{nav.map(({to,key,icon:Icon})=><NavLink end={to==="/"} to={to} key={key}><Icon size={18}/>{t(`nav.${key}`)}</NavLink>)}<a href={feedbackUrl} target="_blank" rel="noreferrer"><MessageCircle size={18}/>{feedbackLabel}</a></nav><div className="header-auth">{user?<button className="user-button" onClick={()=>setAuthMode("signin")}><span>{(user.name||user.email).slice(0,1).toUpperCase()}</span><b>{user.name||user.email}</b></button>:<><button className="login-button" onClick={()=>setAuthMode("signin")}><LogIn size={16}/>{t("account.signIn")}</button><button className="signup-button" onClick={()=>setAuthMode("signup")}><UserPlus size={16}/>{t("account.signUp")}</button></>}</div></div></header>
     <main><Routes>
       <Route path="/" element={<GachaPage settings={settings} papers={latestPapers} favorites={favorites} onDraw={recordDraw} onFavorite={toggleFavorite} onToast={notify}/>}/>
       <Route path="/favorites" element={<FavoritesPage favorites={favorites} onFavorite={toggleFavorite} onToast={notify}/>}/>

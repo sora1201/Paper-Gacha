@@ -1,3 +1,53 @@
-import { useRef,useState } from "react";import { Download,Upload } from "lucide-react";import { useTranslation } from "react-i18next";import { TopicSelector } from "../components/TopicSelector";import { BackupError,createBackup,keys,parseBackup,restoreBackup,write } from "../lib/storage";import { markLocalChange } from "../lib/sync";import type { GachaSettings,PaperCategory } from "../types";
-const categories:PaperCategory[]=["expert","related","other"];
-export function SettingsPage({settings,onSettings,onRestore}:{settings:GachaSettings;onSettings:(s:GachaSettings)=>void;onRestore:()=>void}){const {t,i18n}=useTranslation();const inputRef=useRef<HTMLInputElement>(null);const [message,setMessage]=useState<{kind:"success"|"error";text:string}|null>(null);function exportData(){const blob=new Blob([JSON.stringify(createBackup(),null,2)],{type:"application/json"});const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`paper-gacha-backup-${new Date().toISOString().slice(0,10)}.json`;link.click();URL.revokeObjectURL(link.href)}async function importData(file:File){setMessage(null);try{const candidate:unknown=JSON.parse(await file.text());parseBackup(candidate);if(!window.confirm(t("settings.backupConfirm")))return;restoreBackup(candidate);onRestore();setMessage({kind:"success",text:t("settings.backupSuccess")})}catch(error){setMessage({kind:"error",text:t(error instanceof BackupError&&error.code==="unsupported-version"?"settings.backupUnsupported":"settings.backupInvalid")})}finally{if(inputRef.current)inputRef.current.value=""}}function update(p:Partial<GachaSettings>){onSettings({...settings,...p})}return <div className="page settings-page"><header className="page-heading"><p className="eyebrow">{t("settings.eyebrow")}</p><h1>{t("settings.title")}</h1><p>{t("settings.description")}</p></header><section className="language-panel"><div><strong>{t("settings.language")}</strong><span>{t("settings.saved")}</span></div><div className="segmented"><button className={i18n.language==="ja"?"selected":""} onClick={()=>{i18n.changeLanguage("ja");write(keys.preferences,{language:"ja"});markLocalChange("preferences")}}>日本語</button><button className={i18n.language==="en"?"selected":""} onClick={()=>{i18n.changeLanguage("en");write(keys.preferences,{language:"en"});markLocalChange("preferences")}}>English</button></div></section><div className="settings-grid">{categories.map(cat=>{const topics=`${cat}Topics` as keyof GachaSettings;const count=`${cat}Count` as keyof GachaSettings;return <section className={`settings-card ${cat}`} key={cat}><span className="step">0{categories.indexOf(cat)+1}</span><h2>{t(`common.${cat}`)}</h2><p>{t(`settings.${cat}Help`)}</p><label>{t("settings.topics")}</label><TopicSelector value={settings[topics] as never} onChange={v=>update({[topics]:v})}/><label htmlFor={`${cat}-count`}>{t("settings.count")}</label><div className="stepper"><button onClick={()=>update({[count]:Math.max(0,(settings[count] as number)-1)})}>−</button><input id={`${cat}-count`} type="number" min="0" max="10" value={settings[count] as number} onChange={e=>update({[count]:Math.max(0,Number(e.target.value))})}/><button onClick={()=>update({[count]:(settings[count] as number)+1})}>+</button></div></section>})}</div><section className="range-panel"><div><h2>{t("settings.years")}</h2><p>{t("settings.saved")}</p></div><select value={settings.publicationYears??"all"} onChange={e=>update({publicationYears:e.target.value==="all"?null:Number(e.target.value) as 1|3|5|10})}><option value="1">{t("settings.year1")}</option><option value="3">{t("settings.year3")}</option><option value="5">{t("settings.year5")}</option><option value="10">{t("settings.year10")}</option><option value="all">{t("settings.allYears")}</option></select></section><section className="backup-panel"><div><h2>{t("settings.backupTitle")}</h2><p>{t("settings.backupDescription")}</p></div><div className="backup-actions"><button onClick={exportData}><Download size={17}/>{t("settings.backupExport")}</button><button className="import-button" onClick={()=>inputRef.current?.click()}><Upload size={17}/>{t("settings.backupImport")}</button><input ref={inputRef} className="backup-file" type="file" accept=".json,application/json" onChange={e=>{const file=e.target.files?.[0];if(file)void importData(file)}}/></div><p className="backup-warning">{t("settings.backupWarning")}</p>{message&&<p role="status" className={`backup-message ${message.kind}`}>{message.text}</p>}</section></div>}
+import { useRef, useState } from "react";
+import { Download, Upload } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { TopicSelector } from "../components/TopicSelector";
+import { BackupError, createBackup, keys, parseBackup, restoreBackup, write } from "../lib/storage";
+import { markLocalChange } from "../lib/sync";
+import type { GachaSettings, PaperCategory } from "../types";
+
+const categories: PaperCategory[] = ["expert", "related", "other"];
+
+export function SettingsPage({ settings, onSettings, onRestore }: { settings: GachaSettings; onSettings: (value: GachaSettings) => void; onRestore: () => void }) {
+  const { t, i18n } = useTranslation();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  function exportData() {
+    const blob = new Blob([JSON.stringify(createBackup(), null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `paper-gacha-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  async function importData(file: File) {
+    setMessage(null);
+    try {
+      const candidate: unknown = JSON.parse(await file.text());
+      parseBackup(candidate);
+      if (!window.confirm(t("settings.backupConfirm"))) return;
+      restoreBackup(candidate);
+      onRestore();
+      setMessage({ kind: "success", text: t("settings.backupSuccess") });
+    } catch (error) {
+      setMessage({ kind: "error", text: t(error instanceof BackupError && error.code === "unsupported-version" ? "settings.backupUnsupported" : "settings.backupInvalid") });
+    } finally {
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  function update(patch: Partial<GachaSettings>) { onSettings({ ...settings, ...patch }); }
+
+  return <div className="page settings-page">
+    <header className="page-heading"><p className="eyebrow">{t("settings.eyebrow")}</p><h1>{t("settings.title")}</h1><p>{t("settings.description")}</p></header>
+    <section className="language-panel"><div><strong>{t("settings.language")}</strong><span>{t("settings.saved")}</span></div><div className="segmented"><button className={i18n.language === "ja" ? "selected" : ""} onClick={() => { i18n.changeLanguage("ja"); write(keys.preferences, { language: "ja" }); markLocalChange("preferences"); }}>日本語</button><button className={i18n.language === "en" ? "selected" : ""} onClick={() => { i18n.changeLanguage("en"); write(keys.preferences, { language: "en" }); markLocalChange("preferences"); }}>English</button></div></section>
+    <div className="settings-grid">{categories.map((category) => {
+      const topics = `${category}Topics` as keyof GachaSettings;
+      const count = `${category}Count` as keyof GachaSettings;
+      return <section className={`settings-card ${category}`} key={category}><span className="step">0{categories.indexOf(category) + 1}</span><h2>{t(`common.${category}`)}</h2><p>{t(`settings.${category}Help`)}</p><label>{t("settings.topics")}</label><TopicSelector value={settings[topics] as never} onChange={(value) => update({ [topics]: value })} /><label htmlFor={`${category}-count`}>{t("settings.count")}</label><div className="stepper"><button onClick={() => update({ [count]: Math.max(0, (settings[count] as number) - 1) })}>−</button><input id={`${category}-count`} type="number" min="0" max="10" value={settings[count] as number} onChange={(event) => update({ [count]: Math.max(0, Number(event.target.value)) })} /><button onClick={() => update({ [count]: (settings[count] as number) + 1 })}>+</button></div></section>;
+    })}</div>
+    <section className="range-panel"><div><h2>{t("settings.years")}</h2><p>{t("settings.saved")}</p></div><select value={settings.publicationYears ?? "all"} onChange={(event) => update({ publicationYears: event.target.value === "all" ? null : Number(event.target.value) as 1 | 3 | 5 | 10 })}><option value="1">{t("settings.year1")}</option><option value="3">{t("settings.year3")}</option><option value="5">{t("settings.year5")}</option><option value="10">{t("settings.year10")}</option><option value="all">{t("settings.allYears")}</option></select></section>
+    <section className="backup-panel"><div><h2>{t("settings.backupTitle")}</h2><p>{t("settings.backupDescription")}</p></div><div className="backup-actions"><button onClick={exportData}><Download size={17} />{t("settings.backupExport")}</button><button className="import-button" onClick={() => inputRef.current?.click()}><Upload size={17} />{t("settings.backupImport")}</button><input ref={inputRef} className="backup-file" type="file" accept=".json,application/json" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importData(file); }} /></div><p className="backup-warning">{t("settings.backupWarning")}</p>{message && <p role="status" className={`backup-message ${message.kind}`}>{message.text}</p>}</section>
+  </div>;
+}
