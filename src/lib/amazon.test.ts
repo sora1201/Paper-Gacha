@@ -11,16 +11,12 @@ describe("relatedBookQueries", () => {
     expect(relatedBookQueries([
       paper("one", [{id:"1",name:"Machine Learning"},{id:"2",name:"Statistics"}]),
       paper("two", [{id:"3",name:"machine learning"},{id:"4",name:"Philosophy"},{id:"5",name:"History"}]),
-    ],settings(["Configured"]),"en")).toEqual([
-      "Machine Learning Statistics",
-      "machine learning Philosophy",
-      "one",
-    ]);
+    ],settings(["Configured"]),"en")).toEqual(["Machine Learning","one","two"]);
   });
 
-  it("falls back from a title to configured topics and then a localized generic query", () => {
-    expect(relatedBookQueries([paper("A Paper Title")],settings(["Configured Topic"]),"en")).toEqual(["title","Configured Topic","A Paper Title"]);
-    expect(relatedBookQueries([paper("論文タイトル")],settings(),"ja")).toEqual(["論文タイトル","研究","研究"]);
+  it("uses configured topics and then a localized generic query instead of paper titles", () => {
+    expect(relatedBookQueries([paper("A Paper Title")],settings(["Configured Topic"]),"en")).toEqual(["Configured Topic","academic research","academic research"]);
+    expect(relatedBookQueries([paper("論文タイトル")],settings(),"ja")).toEqual(["研究","研究","研究"]);
   });
 });
 
@@ -43,6 +39,7 @@ describe("amazonSearchUrl", () => {
   it("uses Amazon Japan and includes a configured associate tag", () => {
     const url = new URL(amazonSearchUrl("機械学習", "ja-JP", "paper-22"));
     expect(url.hostname).toBe("www.amazon.co.jp");
+    expect(url.searchParams.get("i")).toBe("stripbooks");
     expect(url.searchParams.get("k")).toBe("機械学習");
     expect(url.searchParams.get("tag")).toBe("paper-22");
   });
@@ -50,6 +47,7 @@ describe("amazonSearchUrl", () => {
   it("uses Amazon.com without a tag when one is not configured", () => {
     const url = new URL(amazonSearchUrl("Machine Learning", "en"));
     expect(url.hostname).toBe("www.amazon.com");
+    expect(url.searchParams.get("i")).toBe("stripbooks");
     expect(url.searchParams.get("tag")).toBeNull();
   });
 });

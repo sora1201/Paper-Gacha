@@ -1,10 +1,10 @@
 import type { Paper } from "../types";
 
 const COMMON_WORDS = new Set<string>([
-  "about","after","among","analysis","approach","based","between","data","effect","effects","from","into","method","methods","model","models","paper","result","results","study","studies","using","with",
+  "about","after","among","analysis","approach","based","between","data","effect","effects","from","into","method","methods","model","models","paper","result","results","study","studies","title","using","with",
   "and","are","for","how","its","our","the","their","this","through","toward","towards","was","were",
 ]);
-const COMMON_JAPANESE = new Set<string>(["研究","分析","手法","方法","効果","結果","アプローチ","データ","モデル"]);
+const COMMON_JAPANESE = new Set<string>(["研究","分析","手法","方法","効果","結果","アプローチ","データ","モデル","論文タイトル"]);
 
 const normalized = (value:string) => value.trim().replace(/\s+/g," ");
 const authorTokens = (paper:Paper) => new Set(paper.authors.flatMap(author => author.toLocaleLowerCase().match(/[a-z][a-z'-]+/g) ?? []));
@@ -48,15 +48,17 @@ export function extractSpecialistKeywords(paper:Paper, limit=2):string[] {
 export function paperTopicQuery(paper:Paper):string {
   const content=`${paper.title} ${paper.abstract ?? ""}`.toLocaleLowerCase();
   return paper.topics.map((topic,index)=>{const name=normalized(topic.name);const tokens=name.toLocaleLowerCase().match(/[a-z]{4,}/g)??[];const overlap=tokens.filter(token=>content.includes(token.slice(0,Math.min(5,token.length)))).length;return {name,score:(content.includes(name.toLocaleLowerCase())?10:0)+overlap*4-index};})
-    .filter(topic=>topic.name).sort((a,b)=>b.score-a.score).slice(0,2).map(topic=>topic.name).join(" ");
+    // One broad topic is more likely to match a book than a compound technical query.
+    .filter(topic=>topic.name).sort((a,b)=>b.score-a.score)[0]?.name ?? "";
 }
 
-export const paperExtractedQuery=(paper:Paper)=>extractSpecialistKeywords(paper).join(" ");
+export const paperExtractedQuery=(paper:Paper)=>extractSpecialistKeywords(paper,1).join(" ");
 
-export function paperBookSearchCandidates(paper:Paper, configuredTopics:string[]=[]):string[] {
-  const configured=normalized(configuredTopics.slice(0,2).join(" "));
-  const values=[paperTopicQuery(paper),paperExtractedQuery(paper),configured,normalized(paper.title)];
+export function paperBookSearchCandidates(paper:Paper, configuredTopics:string[]=[], genericQuery="academic research"):string[] {
+  const configured=normalized(configuredTopics[0] ?? "");
+  // Titles are intentionally not used: they are usually too specific for a book search.
+  const values=[paperTopicQuery(paper),paperExtractedQuery(paper),configured,normalized(genericQuery)];
   return values.filter((value,index)=>value&&values.findIndex(item=>item.toLocaleLowerCase()===value.toLocaleLowerCase())===index);
 }
 
-export const paperBookSearchQuery=(paper:Paper,configuredTopics:string[]=[])=>paperBookSearchCandidates(paper,configuredTopics)[0]||normalized(paper.title);
+export const paperBookSearchQuery=(paper:Paper,configuredTopics:string[]=[],genericQuery="academic research")=>paperBookSearchCandidates(paper,configuredTopics,genericQuery)[0]||normalized(genericQuery);

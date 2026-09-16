@@ -15,9 +15,8 @@ export function relatedBookQueries(papers:Paper[], settings:GachaSettings, langu
   const generic = language.toLowerCase().startsWith("ja") ? "研究" : "academic research";
   const topics = papers.map(paperTopicQuery);
   const extracted = papers.map(paperExtractedQuery);
-  const titles = papers.map(paper => paper.title);
   const configured = [...settings.expertTopics,...settings.relatedTopics,...settings.otherTopics].map(topic => topic.name);
-  const queries = uniqueQueries([...topics,...extracted,...configured,...titles,generic],limit);
+  const queries = uniqueQueries([...topics,...extracted,...configured,generic],limit);
   while (queries.length < limit) queries.push(generic);
   return queries;
 }
@@ -42,6 +41,8 @@ export function amazonSearchUrl(
     ? "www.amazon.co.jp"
     : "www.amazon.com";
   const url = new URL(`https://${domain}/s`);
+  // Amazon otherwise searches every department and can surface non-book products.
+  url.searchParams.set("i", "stripbooks");
   url.searchParams.set("k", topicName);
   const tag = associateTag?.trim();
   if (tag) url.searchParams.set("tag", tag);

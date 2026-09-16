@@ -17,7 +17,8 @@ export function PaperCard({paper,isFavorite,onFavorite,onToast,researchTopics=[]
   const shareButtonRef=useRef<HTMLButtonElement>(null);
   const url=paperAccessUrl(paper);
   const citation=ieeeCitation(paper);
-  const bookKeyword=paperBookSearchQuery(paper,researchTopics);
+  const genericBookQuery=(i18n.resolvedLanguage??i18n.language).toLowerCase().startsWith("ja")?"研究":"academic research";
+  const bookKeyword=paperBookSearchQuery(paper,researchTopics,genericBookQuery);
 
   useEffect(()=>{
     if(!shareOpen)return;
