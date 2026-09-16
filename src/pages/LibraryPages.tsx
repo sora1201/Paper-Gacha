@@ -2,6 +2,7 @@ import { ArrowUpRight, BookHeart, Heart, History as HistoryIcon, Share2, Trash2 
 import { useTranslation } from "react-i18next";
 import { PaperCard } from "../components/PaperCard";
 import { deliverShare, ieeeCitation } from "../lib/citation";
+import { paperAccessUrl } from "../lib/paper-link";
 import type { HistoryEntry, Paper } from "../types";
 
 const Cards = ({papers,favorites,onFavorite,onToast}:{papers:Paper[];favorites:Paper[];onFavorite:(p:Paper)=>void;onToast:(s:string)=>void}) => <div className="paper-grid">{papers.map(p=><PaperCard key={p.id} paper={p} isFavorite={favorites.some(f=>f.id===p.id)} onFavorite={onFavorite} onToast={onToast}/>)}</div>;
@@ -10,8 +11,6 @@ export function FavoritesPage({favorites,onFavorite,onToast}:{favorites:Paper[];
   const {t}=useTranslation();
   return <div className="page library-page"><header className="page-heading"><p className="eyebrow">LIBRARY</p><h1>{t("favorites.title")}</h1><p>{t("favorites.description")}</p></header>{favorites.length?<Cards papers={favorites} favorites={favorites} onFavorite={onFavorite} onToast={onToast}/>:<div className="empty"><BookHeart/><p>{t("favorites.empty")}</p></div>}</div>;
 }
-
-const paperUrl = (paper: Paper) => paper.openAccessUrl || (paper.doi ? `https://doi.org/${paper.doi}` : paper.landingPageUrl);
 
 export function HistoryPage({history,favorites,onFavorite,onDelete,onDeletePaper,onToast}:{history:HistoryEntry[];favorites:Paper[];onFavorite:(p:Paper)=>void;onDelete:(id:string)=>void;onDeletePaper:(entryId:string,paperId:string)=>void;onToast:(s:string)=>void}) {
   const {t,i18n}=useTranslation();
@@ -53,7 +52,7 @@ export function HistoryPage({history,favorites,onFavorite,onDelete,onDeletePaper
       <div className="history-day-draws">{group.entries.map(entry => <div className="history-draw" key={entry.id}>
         <div className="history-draw-heading"><p className="history-time">{t("history.drawnAt",{time:timeFormatter.format(new Date(entry.drawnAt))})}</p><button className="history-delete" onClick={()=>deleteDraw(entry)} aria-label={t("history.delete")}><Trash2 size={15}/><span>{t("history.delete")}</span></button></div>
         <ol className="reference-list">{entry.papers.map(paper => {
-          const url=paperUrl(paper);
+          const url=paperAccessUrl(paper);
           const favorite=favorites.some(item=>item.id===paper.id);
           return <li key={paper.id}><div className="reference-content"><span className={`reference-category ${paper.category}`}>{t(`common.${paper.category}`)}</span><p>{ieeeCitation(paper)}</p></div><div className="reference-actions">{url && <a href={url} target="_blank" rel="noreferrer"><ArrowUpRight size={16}/><span>{t("common.open")}</span></a>}<button onClick={()=>void sharePaper(paper)}><Share2 size={16}/><span>{t("common.share")}</span></button><button className={favorite?"active":""} onClick={()=>onFavorite(paper)}><Heart size={16} fill={favorite?"currentColor":"none"}/><span>{t(favorite?"common.removeFavorite":"common.favorite")}</span></button><button className="reference-delete" onClick={()=>deletePaper(entry.id,paper)}><Trash2 size={16}/><span>{t("history.deletePaper")}</span></button></div></li>;
         })}</ol>

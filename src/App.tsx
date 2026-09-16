@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BookHeart, Clock3, Dices, Settings } from "lucide-react";
+import { BookHeart, Clock3, Dices, LogIn, Settings, UserPlus } from "lucide-react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { FavoritesPage, HistoryPage } from "./pages/LibraryPages";
 import { GachaPage } from "./pages/GachaPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { AccountSync } from "./components/AccountSync";
 import {
   getFavorites,
   getHistory,
@@ -29,6 +30,7 @@ export default function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(navigator.onLine ? "synced" : "offline");
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [authMode, setAuthMode] = useState<"signin" | "signup" | null>(() => new URLSearchParams(location.search).has("token") || new URLSearchParams(location.search).has("authError") ? "signin" : null);
 
   function restored() {
     const restoredHistory = getHistory();
@@ -95,14 +97,15 @@ export default function App() {
   ];
 
   return <div className="app-shell">
-    <header className="topbar"><NavLink to="/" className="brand"><img className="brand-mark" src="/paper-gacha-app-icon.png" alt=""/><span><strong>{t("brand")}</strong><small>{t("tagline")}</small></span></NavLink><nav>{nav.map(({to,key,icon:Icon})=><NavLink end={to==="/"} to={to} key={key}><Icon size={18}/>{t(`nav.${key}`)}</NavLink>)}</nav></header>
+    <header className="topbar"><NavLink to="/" className="brand"><img className="brand-mark" src="/paper-gacha-app-icon.png" alt=""/><span><strong>{t("brand")}</strong><small>{t("tagline")}</small></span></NavLink><div className="topbar-right"><nav>{nav.map(({to,key,icon:Icon})=><NavLink end={to==="/"} to={to} key={key}><Icon size={18}/>{t(`nav.${key}`)}</NavLink>)}</nav><div className="header-auth">{user?<button className="user-button" onClick={()=>setAuthMode("signin")}><span>{(user.name||user.email).slice(0,1).toUpperCase()}</span><b>{user.name||user.email}</b></button>:<><button className="login-button" onClick={()=>setAuthMode("signin")}><LogIn size={16}/>{t("account.signIn")}</button><button className="signup-button" onClick={()=>setAuthMode("signup")}><UserPlus size={16}/>{t("account.signUp")}</button></>}</div></div></header>
     <main><Routes>
       <Route path="/" element={<GachaPage settings={settings} papers={latestPapers} favorites={favorites} onDraw={recordDraw} onFavorite={toggleFavorite} onToast={notify}/>}/>
       <Route path="/favorites" element={<FavoritesPage favorites={favorites} onFavorite={toggleFavorite} onToast={notify}/>}/>
       <Route path="/history" element={<HistoryPage history={history} favorites={favorites} onFavorite={toggleFavorite} onDelete={deleteDraw} onDeletePaper={deletePaper} onToast={notify}/>}/>
-      <Route path="/settings" element={<SettingsPage settings={settings} onSettings={updateSettings} onRestore={restored} user={user} syncStatus={syncStatus} lastSyncedAt={lastSyncedAt} onAuthenticated={authenticated} onSync={runSync} onLogout={loggedOut}/>}/>
+      <Route path="/settings" element={<SettingsPage settings={settings} onSettings={updateSettings} onRestore={restored}/>}/>
     </Routes></main>
     <nav className="bottom-nav">{nav.map(({to,key,icon:Icon})=><NavLink end={to==="/"} to={to} key={key}><Icon size={21}/><span>{t(`nav.${key}`)}</span></NavLink>)}</nav>
     {toast&&<div className="toast" role="status">{toast}</div>}
+    {authMode&&<AccountSync user={user} status={syncStatus} lastSyncedAt={lastSyncedAt} initialMode={authMode} onClose={()=>setAuthMode(null)} onAuthenticated={authenticated} onSync={runSync} onLogout={loggedOut}/>}
   </div>;
 }

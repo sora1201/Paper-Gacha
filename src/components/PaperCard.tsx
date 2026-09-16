@@ -3,11 +3,10 @@ import { ArrowUpRight,BookOpen,Heart,Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { deliverShare,ieeeCitation,shareTextFor,socialShareUrl } from "../lib/citation";
 import type { SocialShareTarget } from "../lib/citation";
+import { paperAccessUrl } from "../lib/paper-link";
 import type { Paper } from "../types";
 import { amazonSearchUrl } from "../lib/amazon";
 import { paperBookSearchQuery } from "../lib/bookSearch";
-
-const urlFor=(paper:Paper)=>paper.openAccessUrl||(paper.doi?`https://doi.org/${paper.doi}`:paper.landingPageUrl);
 
 export function PaperCard({paper,isFavorite,onFavorite,onToast,researchTopics=[]}:{paper:Paper;isFavorite:boolean;onFavorite:(p:Paper)=>void;onToast:(s:string)=>void;researchTopics?:string[]}) {
   const {t,i18n}=useTranslation();
@@ -16,7 +15,7 @@ export function PaperCard({paper,isFavorite,onFavorite,onToast,researchTopics=[]
   const [memo,setMemo]=useState("");
   const memoRef=useRef<HTMLTextAreaElement>(null);
   const shareButtonRef=useRef<HTMLButtonElement>(null);
-  const url=urlFor(paper);
+  const url=paperAccessUrl(paper);
   const citation=ieeeCitation(paper);
   const bookKeyword=paperBookSearchQuery(paper,researchTopics);
 
