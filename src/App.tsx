@@ -106,7 +106,7 @@ export default function App() {
       <Route path="/history" element={<HistoryPage history={history} favorites={favorites} onFavorite={toggleFavorite} onDelete={deleteDraw} onDeletePaper={deletePaper} onToast={notify}/>}/>
       <Route path="/settings" element={<SettingsPage settings={settings} onSettings={updateSettings} onRestore={restored}/>}/>
     </Routes></main>
-    <nav className="bottom-nav">{nav.map(({to,key,icon:Icon})=><NavLink end={to==="/"} to={to} key={key}><Icon size={21}/><span>{t(`nav.${key}`)}</span></NavLink>)}</nav>
+    <nav className="bottom-nav">{nav.map(({to,key,icon:Icon})=><NavLink end={to==="/"} to={to} key={key}><Icon size={21}/><span>{t(`nav.${key}`)}</span></NavLink>)}<a href={feedbackUrl} target="_blank" rel="noreferrer"><MessageCircle size={21}/><span>{feedbackLabel}</span></a></nav>
     {toast&&<div className="toast" role="status">{toast}</div>}
     {authMode&&<AccountSync user={user} status={syncStatus} lastSyncedAt={lastSyncedAt} initialMode={authMode} onClose={()=>setAuthMode(null)} onAuthenticated={authenticated} onSync={runSync} onLogout={loggedOut}/>}
   </div>;
