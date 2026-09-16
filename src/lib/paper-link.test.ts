@@ -18,19 +18,19 @@ const paper = (changes: Partial<Paper> = {}): Paper => ({
 });
 
 describe("paperAccessUrl", () => {
-  it("routes SAGE records through OpenAlex instead of a commonly blocked direct link", () => {
-    expect(paperAccessUrl(paper())).toBe("https://openalex.org/W123");
+  it("prefers the publisher reading page", () => {
+    expect(paperAccessUrl(paper())).toBe("https://journals.sagepub.com/doi/10.1177/example");
   });
 
-  it("also avoids SAGE URLs incorrectly reported as open-access copies", () => {
-    expect(paperAccessUrl(paper({ openAccessUrl: "https://journals.sagepub.com/doi/pdf/10.1177/example" }))).toBe("https://openalex.org/W123");
+  it("does not replace the publisher page with a PDF or repository copy", () => {
+    expect(paperAccessUrl(paper({ openAccessUrl: "https://repository.example/paper.pdf" }))).toBe("https://journals.sagepub.com/doi/10.1177/example");
   });
 
-  it("continues to prefer open-access copies from other hosts", () => {
-    expect(paperAccessUrl(paper({ openAccessUrl: "https://repository.example/paper.pdf" }))).toBe("https://repository.example/paper.pdf");
-  });
-
-  it("uses the DOI for records which do not have an open copy", () => {
+  it("uses the DOI when the publisher page is unavailable", () => {
     expect(paperAccessUrl(paper({ id: "crossref-record", landingPageUrl: null }))).toBe("https://doi.org/10.1177/example");
+  });
+
+  it("uses an open copy only as a final fallback", () => {
+    expect(paperAccessUrl(paper({ doi: null, landingPageUrl: null, openAccessUrl: "https://repository.example/paper.pdf" }))).toBe("https://repository.example/paper.pdf");
   });
 });

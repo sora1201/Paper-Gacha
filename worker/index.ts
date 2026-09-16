@@ -51,7 +51,10 @@ async function fetchJson(url: string) {
 }
 
 async function fetchOpenAlex(topic: SelectedTopic, category: PaperCategory, settings: GachaSettings, apiKey?: string) {
-  const filters = ["is_retracted:false"];
+  // OpenAlex indexes books and book chapters alongside journal and conference
+  // articles. Paper Gacha is for paper discovery, so keep chapters and books
+  // out of the candidate pool at the API boundary.
+  const filters = ["is_retracted:false", "type:article|review"];
   if (settings.publicationYears) {
     const from = new Date().getUTCFullYear() - settings.publicationYears + 1;
     filters.push(`from_publication_date:${from}-01-01`);
@@ -77,7 +80,9 @@ async function fetchCrossref(topic: SelectedTopic, category: PaperCategory, sett
   });
   if (settings.publicationYears) {
     const from = new Date().getUTCFullYear() - settings.publicationYears + 1;
-    params.set("filter", `from-pub-date:${from}-01-01`);
+    params.set("filter", `from-pub-date:${from}-01-01,type:journal-article`);
+  } else {
+    params.set("filter", "type:journal-article");
   }
   const data = await fetchJson(`${crossrefBase}/works?${params}`);
   return (data.message?.items || []).map((work: any) => mapCrossrefWork(work, category));

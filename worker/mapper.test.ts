@@ -51,4 +51,14 @@ describe("mapCrossrefWork", () => {
     expect(paper.year).toBeNull();
     expect(paper.authors).toEqual([]);
   });
+
+  it("does not expose machine-readable XML API links as paper links", () => {
+    const paper = mapCrossrefWork({
+      URL: "https://api.elsevier.com/content/article/PII:S0029801825026903?httpAccept=text/xml",
+      link: [{ URL: "https://api.elsevier.com/content/article/PII:S0029801825026903?httpAccept=text/xml" }],
+    }, "other");
+
+    expect(paper.landingPageUrl).toBeNull();
+    expect(paper.openAccessUrl).toBeNull();
+  });
 });
